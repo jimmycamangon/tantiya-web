@@ -32,18 +32,20 @@ export default function DashboardSidebar({
           aria-label="Toggle logo details"
         >
           {showFullLogo ? (
-            <img
-              src="/TuloyLang-Logov2.png"
-              alt="logo"
-              className="h-7 w-auto object-contain dark:invert"
-            />
+            <div className="flex min-w-0 items-center gap-3">
+              <img src="./icon.png" alt="" width={"30px"} />
+              <div className="min-w-0 text-left">
+                <p className="truncate text-base font-extrabold uppercase tracking-[0.22em] text-foreground">
+                  Tantiya
+                </p>
+                <p className="muted-copy truncate text-xs">
+                  Budget tracking with cutoff awareness
+                </p>
+              </div>
+            </div>
           ) : (
-            <div className="flex h-9 w-9 items-center justify-center rounded-md">
-              <img
-                src="/TuloyLangIcon.png"
-                alt="icon"
-                className="h-7 w-auto object-contain dark:invert"
-              />
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-stone-900 text-sm font-extrabold uppercase tracking-[0.22em] text-stone-50">
+              <img src="./icon.png" alt="" width={"50px"} />
             </div>
           )}
         </button>
@@ -62,14 +64,19 @@ export default function DashboardSidebar({
                 onClick={() => onNavigate(item.id)}
                 className={`nav-item-base ${isActive ? 'nav-item-active' : 'nav-item-idle'}`}
               >
-                <span className="nav-icon-chip">
+                <span className={`nav-icon-chip ${isActive ? 'nav-icon-chip-active' : ''}`}>
                   <Icon className="h-4 w-4" strokeWidth={2} />
                 </span>
 
                 {canShowDetails && (
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-medium">{item.title}</span>
-                    <span className="muted-copy block truncate text-xs">
+                    <span
+                      className={[
+                        'block truncate text-xs',
+                        isActive ? 'text-emerald-100/80' : 'muted-copy',
+                      ].join(' ')}
+                    >
                       {routeMeta[item.id]?.description ?? item.detail}
                     </span>
                   </span>

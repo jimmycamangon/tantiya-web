@@ -3,6 +3,12 @@ export type CurrencyCode = 'PHP'
 export type BudgetViewMode = 'monthly' | 'cutoff'
 
 export type HousingPaymentPhase = 'equity' | 'amortization'
+export type HousingBudgetApplication =
+  | 'whole-month'
+  | 'split-across-cutoffs'
+  | 'specific-cutoff'
+export type AllowanceFrequency = 'monthly' | 'per-cutoff'
+export type PayrollDeductionType = 'sss' | 'pagibig' | 'philhealth' | 'wtax'
 
 export type ExpenseCategory =
   | 'food'
@@ -23,6 +29,7 @@ export interface CutoffDefinition {
   label: string
   startDay: number
   endDay: number
+  expectedIncomeAmount: number
   expectedPayoutOffsetDays?: number
   isActive: boolean
 }
@@ -40,11 +47,29 @@ export interface HousingPlan {
   enabled: boolean
   name: string
   phase: HousingPaymentPhase
+  budgetApplication: HousingBudgetApplication
+  cutoffId?: string
   equityAmount: number
   equityMonths: number
   equityMonthsPaid: number
   amortizationAmount: number
   startDate?: string
+}
+
+export interface AllowancePlan {
+  enabled: boolean
+  amount: number
+  frequency: AllowanceFrequency
+  label: string
+}
+
+export interface PayrollDeduction {
+  id: string
+  type: PayrollDeductionType
+  label: string
+  amount: number
+  enabled: boolean
+  cutoffId?: string
 }
 
 export interface IncomeEntry {
@@ -71,6 +96,8 @@ export interface BudgetSettings {
   viewMode: BudgetViewMode
   monthlyIncomeTarget: number
   savingsBuffer: number
+  allowancePlan: AllowancePlan
+  payrollDeductions: PayrollDeduction[]
   fixedExpenses: FixedExpense[]
   housingPlan: HousingPlan
   cutoffs: CutoffDefinition[]
@@ -100,6 +127,9 @@ export interface CutoffSummary {
   label: string
   rangeLabel: string
   totalIncome: number
+  totalFixedExpenses: number
+  totalPayrollDeductions: number
+  totalHousingCost: number
   totalExpenses: number
   remainingBudget: number
 }

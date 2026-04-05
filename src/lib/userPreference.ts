@@ -1,14 +1,14 @@
 import type { UserProfile } from '../types/userProfile'
 
-export const USER_PROFILE_STORAGE_KEY = 'tuloylang_user_profile'
+export const USER_PROFILE_STORAGE_KEY = 'tantiya_user_profile'
 export const THEME_STORAGE_KEY = 'theme'
 export const NAV_EXPANDED_STORAGE_KEY = 'nav_expanded'
 
 const defaultUserProfile: UserProfile = {
-  fullName: 'New User',
-  title: 'Getting Started',
-  focusArea: 'Building better consistency one day at a time.',
-  bio: 'Set up your profile, then start tracking habits, workouts, and long-term progress.',
+  fullName: 'Tantiya User',
+  title: 'Budget Planner',
+  focusArea: 'Stay aware of your remaining budget every cutoff.',
+  bio: 'Track salary, fixed bills, housing payments, and quick gastos with local-first backup.',
   avatarDataUrl: '',
 }
 
@@ -55,7 +55,7 @@ export function getProfileInitials(profile: UserProfile) {
     .filter(Boolean)
     .slice(0, 2)
 
-  if (parts.length === 0) return 'TL'
+  if (parts.length === 0) return 'TA'
   return parts.map((part) => part[0]?.toUpperCase() ?? '').join('')
 }
 

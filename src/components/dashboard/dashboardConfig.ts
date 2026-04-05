@@ -1,5 +1,12 @@
 import type { LucideIcon } from 'lucide-react'
-import { BarChart3, Dumbbell, LayoutDashboard, Repeat, Settings } from 'lucide-react'
+import {
+  BarChart3,
+  CalendarRange,
+  HandCoins,
+  LayoutDashboard,
+  Settings,
+  WalletCards,
+} from 'lucide-react'
 
 export type RouteMeta = {
   path: string
@@ -19,32 +26,38 @@ export const routeMeta: Record<string, RouteMeta> = {
   dashboard: {
     path: '/dashboard',
     title: 'Dashboard',
-    description: 'Overview and quick stats',
+    description: 'Budget overview and current balance',
     breadcrumbs: ['dashboard'],
+  },
+  quickDeduct: {
+    path: '/quick-deduct',
+    title: 'Quick Deduct',
+    description: 'Tap gastos and deduct instantly',
+    breadcrumbs: ['quickDeduct'],
+  },
+  cutoffs: {
+    path: '/cutoffs',
+    title: 'Cutoff Tracking',
+    description: 'Compare spending by payroll cycle',
+    breadcrumbs: ['cutoffs'],
+  },
+  analysis: {
+    path: '/analysis',
+    title: 'Analysis',
+    description: 'Budget and spending insights',
+    breadcrumbs: ['analysis'],
   },
   settings: {
     path: '/settings',
     title: 'Settings',
-    description: 'Preferences',
+    description: 'Preferences and backup tools',
     breadcrumbs: ['settings'],
   },
-  habits: {
-    path: '/habits',
-    title: 'Habits',
-    description: 'Daily routines',
-    breadcrumbs: ['habits'],
-  },
-  workouts: {
-    path: '/workouts',
-    title: 'Workouts',
-    description: 'Training sessions',
-    breadcrumbs: ['workouts'],
-  },
-  analytics: {
-    path: '/analytics',
-    title: 'Analytics',
-    description: 'Insights',
-    breadcrumbs: ['analytics'],
+  budgetSetup: {
+    path: '/setup',
+    title: 'Budget Setup',
+    description: 'Income, bills, and housing setup',
+    breadcrumbs: ['budgetSetup'],
   },
 }
 
@@ -53,30 +66,36 @@ export const navItems: NavItem[] = [
     id: 'dashboard',
     icon: LayoutDashboard,
     title: 'Dashboard',
-    detail: 'Overview and quick stats',
+    detail: 'Current budget pulse',
   },
   {
-    id: 'habits',
-    icon: Repeat,
-    title: 'Habits',
-    detail: 'Daily routines',
+    id: 'quickDeduct',
+    icon: HandCoins,
+    title: 'Quick Deduct',
+    detail: 'Tap gastos fast',
   },
   {
-    id: 'workouts',
-    icon: Dumbbell,
-    title: 'Workouts',
-    detail: 'Training sessions',
+    id: 'cutoffs',
+    icon: CalendarRange,
+    title: 'Cutoffs',
+    detail: 'Payroll cycle tracking',
   },
   {
-    id: 'analytics',
+    id: 'analysis',
     icon: BarChart3,
-    title: 'Analytics',
-    detail: 'Insights',
+    title: 'Analysis',
+    detail: 'Compare spending trends',
+  },
+  {
+    id: 'budgetSetup',
+    icon: WalletCards,
+    title: 'Budget Setup',
+    detail: 'Income and obligations',
   },
   {
     id: 'settings',
     icon: Settings,
     title: 'Settings',
-    detail: 'Preferences',
+    detail: 'Backup and preferences',
   },
 ]

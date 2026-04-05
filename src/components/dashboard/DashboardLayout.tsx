@@ -24,7 +24,7 @@ export default function DashboardLayout() {
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [commandQuery, setCommandQuery] = useState('')
   const [highlightedIndex, setHighlightedIndex] = useState(0)
-  const [isDark, setIsDark] = useState(false)
+  const [isDark, setIsDark] = useState(() => readThemePreference() === 'dark')
   const [profile, setProfile] = useState(readUserProfile)
   const profileMenuRef = useRef<HTMLDivElement | null>(null)
   const commandItemRefs = useRef<Array<HTMLButtonElement | null>>([])
@@ -59,7 +59,6 @@ export default function DashboardLayout() {
   }, [commandItems, commandQuery])
 
   useEffect(() => {
-    setIsDark(readThemePreference() === 'dark')
     setExpanded(readNavExpandedPreference())
     setProfile(readUserProfile())
   }, [])
@@ -228,7 +227,7 @@ export default function DashboardLayout() {
             profileInitials={getProfileInitials(profile)}
           />
 
-          <main className="w-full flex-1 p-6">
+          <main className="relative z-0 w-full flex-1 p-6">
             <div className="muted-copy mb-4 flex flex-wrap items-center gap-1 text-sm">
               {breadcrumbTrail.map((crumb, index) => {
                 const isLast = index === breadcrumbTrail.length - 1
@@ -319,7 +318,7 @@ export default function DashboardLayout() {
             </div>
 
             <div className="muted-copy border-t border-border px-3 py-2 text-xs">
-              Use <span className="font-medium">Up/Down</span> to navigate,{' '}
+              Jump across your Tantiya pages with <span className="font-medium">Up/Down</span>,{' '}
               <span className="font-medium">Enter</span> to open,{' '}
               <span className="font-medium">Esc</span> to close.
             </div>
@@ -332,7 +331,8 @@ export default function DashboardLayout() {
           <div className="surface-card w-full max-w-sm p-5 shadow-xl">
             <h3 className="text-base font-semibold text-foreground">Back To Home</h3>
             <p className="muted-copy mt-2 text-sm">
-              This will return you to the landing page. Your saved local data will stay intact.
+              This will return you to the landing page. Your Tantiya data saved in local storage
+              will stay intact.
             </p>
             <div className="mt-4 flex justify-end gap-2">
               <button

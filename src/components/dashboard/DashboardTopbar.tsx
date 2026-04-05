@@ -35,7 +35,7 @@ export default function DashboardTopbar({
   profileInitials,
 }: DashboardTopbarProps) {
   return (
-    <header className="top-nav-shell flex h-16 items-center justify-between px-6">
+    <header className="top-nav-shell relative z-40 flex h-16 items-center justify-between overflow-visible px-6">
       <div className="flex items-center gap-3">
         <button
           type="button"
@@ -52,6 +52,9 @@ export default function DashboardTopbar({
           <h1 className="truncate text-lg font-semibold leading-tight text-foreground">
             {currentRoute.title}
           </h1>
+          <p className="muted-copy hidden text-sm md:block">
+            {currentRoute.description ?? 'Manage your Tantiya budget workspace.'}
+          </p>
         </div>
       </div>
 
@@ -103,13 +106,13 @@ export default function DashboardTopbar({
                 onClick={onNavigateSettings}
                 className="w-full rounded-md px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-accent"
               >
-                Settings
+                Settings and backup
               </button>
               <div className="my-1 border-t border-border" />
               <button
                 type="button"
                 onClick={onOpenExitConfirm}
-                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-red-600 transition-colors hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-950/40"
+                className="ui-button-subtle flex w-full items-center justify-start gap-2"
               >
                 <Home className="h-4 w-4" />
                 Back to Home

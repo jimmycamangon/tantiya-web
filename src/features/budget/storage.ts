@@ -26,15 +26,36 @@ const normalizeBudgetData = (value: unknown): BudgetData => {
     settings: {
       ...DEFAULT_SETTINGS,
       ...raw.settings,
+      allowancePlan: {
+        ...DEFAULT_SETTINGS.allowancePlan,
+        ...raw.settings?.allowancePlan,
+      },
+      payrollDeductions: Array.isArray(raw.settings?.payrollDeductions)
+        ? raw.settings.payrollDeductions.map((deduction, index) => ({
+            ...DEFAULT_SETTINGS.payrollDeductions[index % DEFAULT_SETTINGS.payrollDeductions.length],
+            ...deduction,
+            amount: typeof deduction?.amount === 'number' ? deduction.amount : 0,
+            enabled: typeof deduction?.enabled === 'boolean' ? deduction.enabled : false,
+          }))
+        : DEFAULT_SETTINGS.payrollDeductions,
       housingPlan: {
         ...DEFAULT_SETTINGS.housingPlan,
         ...raw.settings?.housingPlan,
+        cutoffId:
+          typeof raw.settings?.housingPlan?.cutoffId === 'string'
+            ? raw.settings.housingPlan.cutoffId
+            : undefined,
       },
       fixedExpenses: Array.isArray(raw.settings?.fixedExpenses)
         ? raw.settings.fixedExpenses
         : [],
       cutoffs: Array.isArray(raw.settings?.cutoffs)
-        ? raw.settings.cutoffs
+        ? raw.settings.cutoffs.map((cutoff, index) => ({
+            ...DEFAULT_SETTINGS.cutoffs[index % DEFAULT_SETTINGS.cutoffs.length],
+            ...cutoff,
+            expectedIncomeAmount:
+              typeof cutoff?.expectedIncomeAmount === 'number' ? cutoff.expectedIncomeAmount : 0,
+          }))
         : DEFAULT_SETTINGS.cutoffs,
       quickAmountPresets: Array.isArray(raw.settings?.quickAmountPresets)
         ? raw.settings.quickAmountPresets

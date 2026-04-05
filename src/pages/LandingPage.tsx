@@ -1,19 +1,21 @@
 
+import { Link } from 'react-router-dom'
+
 export default function LandingPage() {
   return (
-    <section className="grid gap-6 text-stone-900 lg:grid-cols-[minmax(0,1.25fr)_24rem]">
-      <div className="overflow-hidden rounded-[2rem] border border-black/8 bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(244,240,224,0.92))] shadow-[0_26px_80px_rgba(75,85,56,0.14)]">
+    <section className="grid gap-6 text-foreground lg:grid-cols-[minmax(0,1.25fr)_24rem]">
+      <div className="public-panel overflow-hidden bg-[linear-gradient(135deg,rgba(255,255,255,0.55),rgba(244,240,224,0.3))] dark:bg-[linear-gradient(135deg,rgba(255,255,255,0.04),rgba(168,162,158,0.02))]">
         <div className="grid gap-10 px-6 py-8 sm:px-8 sm:py-10 lg:grid-cols-[minmax(0,1fr)_15rem] lg:gap-6 lg:px-10 lg:py-12">
           <div className="space-y-6">
-            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-900/10 bg-emerald-900/5 px-4 py-2 text-xs font-bold uppercase tracking-[0.28em] text-emerald-900">
+            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-900/10 bg-emerald-900/5 px-4 py-2 text-xs font-bold uppercase tracking-[0.28em] text-emerald-900 dark:border-emerald-300/15 dark:bg-emerald-300/8 dark:text-emerald-300">
               Budget pulse tracker
             </div>
 
             <div className="space-y-4">
-              <h1 className="max-w-3xl text-4xl font-extrabold leading-none tracking-[-0.06em] text-balance sm:text-5xl lg:text-7xl">
+              <h1 className="max-w-3xl text-4xl font-extrabold leading-none tracking-[-0.06em] text-balance text-foreground sm:text-5xl lg:text-7xl">
                 Tantiya helps you see what is really left from your money.
               </h1>
-              <p className="max-w-2xl text-base leading-7 text-stone-700 sm:text-lg">
+              <p className="max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
                 Built for real salary cycles, housing payments, and everyday
                 gastos. Instead of typing every expense, you tap values fast and
                 instantly see your remaining budget.
@@ -21,23 +23,17 @@ export default function LandingPage() {
             </div>
 
             <div className="flex flex-wrap gap-3">
-              <a
-                className="inline-flex min-h-12 items-center justify-center rounded-full bg-stone-900 px-6 text-sm font-semibold text-stone-50 transition duration-200 hover:-translate-y-0.5 hover:bg-stone-800"
-                href="#highlights"
-              >
-                Explore highlights
-              </a>
-              <a
-                className="inline-flex min-h-12 items-center justify-center rounded-full border border-stone-900/10 bg-white/70 px-6 text-sm font-semibold text-stone-800 transition duration-200 hover:-translate-y-0.5 hover:bg-white"
-                href="#flow"
-              >
-                See the flow
-              </a>
+              <Link className="public-primary-button px-6" to="/start">
+                Open Tantiya
+              </Link>
+              <Link className="public-outline-button px-6" to="/start">
+                Restore or setup
+              </Link>
             </div>
           </div>
 
-          <div className="grid gap-3 rounded-[1.75rem] bg-stone-900 p-4 text-stone-50 shadow-inner shadow-black/20">
-            <div className="rounded-3xl bg-white/8 p-4">
+          <div className="public-dark-panel grid gap-3 p-4">
+            <div className="rounded-3xl bg-white/8 p-4 dark:bg-white/6">
               <p className="text-xs font-bold uppercase tracking-[0.25em] text-emerald-200/90">
                 Available now
               </p>
@@ -57,7 +53,7 @@ export default function LandingPage() {
               ].map(([label, value]) => (
                 <div
                   key={label}
-                  className="rounded-3xl border border-white/10 bg-white/6 p-4"
+                  className="rounded-3xl border border-white/10 bg-white/6 p-4 dark:bg-white/4"
                 >
                   <p className="text-xs uppercase tracking-[0.22em] text-stone-300">
                     {label}
@@ -72,17 +68,17 @@ export default function LandingPage() {
         </div>
       </div>
 
-      <aside className="flex flex-col gap-4 rounded-[2rem] border border-black/8 bg-white/75 p-6 shadow-[0_20px_60px_rgba(75,85,56,0.12)] backdrop-blur">
+      <aside className="public-muted-panel flex flex-col gap-4 p-6">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.26em] text-amber-700">
+          <p className="public-eyebrow">
             Why this works
           </p>
-          <h2 className="mt-3 text-2xl font-bold tracking-[-0.05em] text-stone-900">
+          <h2 className="mt-3 text-2xl font-bold tracking-[-0.05em] text-foreground">
             Designed for quick decisions, not heavy encoding.
           </h2>
         </div>
 
-        <div className="space-y-3 text-sm leading-6 text-stone-700">
+        <div className="space-y-3 text-sm leading-6 text-muted-foreground">
           <p>Track salary, house equity, amortization, and everyday gastos.</p>
           <p>Compare spending per kinsenas or custom cutoff periods.</p>
           <p>Save everything in local storage with export and import backup.</p>
@@ -109,15 +105,15 @@ export default function LandingPage() {
         ].map((item) => (
           <article
             key={item.title}
-            className="rounded-[1.75rem] border border-black/8 bg-white/75 p-6 shadow-[0_18px_40px_rgba(75,85,56,0.08)]"
+            className="public-muted-panel rounded-[1.75rem] p-6"
           >
-            <p className="text-xs font-bold uppercase tracking-[0.24em] text-amber-700">
+            <p className="public-eyebrow">
               Core feature
             </p>
-            <h2 className="mt-3 text-2xl font-bold tracking-[-0.05em] text-stone-900">
+            <h2 className="mt-3 text-2xl font-bold tracking-[-0.05em] text-foreground">
               {item.title}
             </h2>
-            <p className="mt-3 text-sm leading-6 text-stone-700">
+            <p className="mt-3 text-sm leading-6 text-muted-foreground">
               {item.body}
             </p>
           </article>
@@ -126,7 +122,7 @@ export default function LandingPage() {
 
       <div
         id="flow"
-        className="grid gap-4 rounded-[2rem] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.76),rgba(244,240,224,0.92))] p-6 shadow-[0_22px_60px_rgba(75,85,56,0.12)] lg:col-span-2 md:grid-cols-4"
+        className="public-panel grid gap-4 bg-[linear-gradient(180deg,rgba(255,255,255,0.35),rgba(244,240,224,0.2))] p-6 lg:col-span-2 md:grid-cols-4 dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(168,162,158,0.02))]"
       >
         {[
           ['1', 'Set income', 'Add salary, budget cycle, and housing obligations.'],
@@ -134,7 +130,7 @@ export default function LandingPage() {
           ['3', 'Tap your gastos', 'Use quick values instead of typing every single expense.'],
           ['4', 'Read the signal', 'See remaining budget and compare if one cutoff is more magastos.'],
         ].map(([step, title, body]) => (
-          <div key={step} className="rounded-[1.5rem] bg-stone-900 px-5 py-6 text-stone-50">
+          <div key={step} className="public-dark-panel rounded-[1.5rem] px-5 py-6">
             <p className="text-xs font-bold uppercase tracking-[0.25em] text-emerald-200">
               Step {step}
             </p>
