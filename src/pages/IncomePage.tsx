@@ -119,7 +119,7 @@ export default function IncomePage() {
 
   return (
     <section className="space-y-6">
-      <section className="surface-card rounded-[2rem] bg-[linear-gradient(180deg,rgba(255,255,255,0.14),rgba(255,255,255,0.06))] p-6 dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.015))] sm:p-8">
+      <section className="surface-card rounded-[2rem] bg-[linear-gradient(180deg,rgba(255,252,246,0.82),rgba(244,239,226,0.48))] p-6 dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.015))] sm:p-8">
         <p className="text-xs font-bold uppercase tracking-[0.26em] text-amber-700 dark:text-amber-300">
           Income
         </p>
@@ -142,19 +142,19 @@ export default function IncomePage() {
         </div>
 
         <div className="mt-6 grid gap-3 md:grid-cols-4">
-          <div className="rounded-2xl border border-white/40 bg-white/45 px-4 py-4 backdrop-blur dark:border-white/10 dark:bg-white/5">
+          <div className="rounded-2xl border border-amber-200/70 bg-[rgba(255,251,244,0.76)] px-4 py-4 backdrop-blur dark:border-white/10 dark:bg-white/5">
             <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Actual total</p>
             <p className="mt-2 text-2xl font-bold tracking-[-0.04em] text-foreground">
               {toCurrency(actualIncomeTotal)}
             </p>
           </div>
-          <div className="rounded-2xl border border-white/40 bg-white/45 px-4 py-4 backdrop-blur dark:border-white/10 dark:bg-white/5">
+          <div className="rounded-2xl border border-amber-200/70 bg-[rgba(255,251,244,0.76)] px-4 py-4 backdrop-blur dark:border-white/10 dark:bg-white/5">
             <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Expected total</p>
             <p className="mt-2 text-2xl font-bold tracking-[-0.04em] text-foreground">
               {toCurrency(isCutoffMode ? expectedIncomeTotal : budgetData.settings.monthlyIncomeTarget)}
             </p>
           </div>
-          <div className="rounded-2xl border border-white/40 bg-white/45 px-4 py-4 backdrop-blur dark:border-white/10 dark:bg-white/5">
+          <div className="rounded-2xl border border-amber-200/70 bg-[rgba(255,251,244,0.76)] px-4 py-4 backdrop-blur dark:border-white/10 dark:bg-white/5">
             <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Variance</p>
             <p
               className={[
@@ -165,7 +165,7 @@ export default function IncomePage() {
               {toCurrency(incomeDifference)}
             </p>
           </div>
-          <div className="rounded-2xl border border-white/40 bg-white/45 px-4 py-4 backdrop-blur dark:border-white/10 dark:bg-white/5">
+          <div className="rounded-2xl border border-amber-200/70 bg-[rgba(255,251,244,0.76)] px-4 py-4 backdrop-blur dark:border-white/10 dark:bg-white/5">
             <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Saved entries</p>
             <p className="mt-2 text-2xl font-bold tracking-[-0.04em] text-foreground">
               {budgetData.incomes.length}

@@ -418,7 +418,7 @@ export default function DashboardPage() {
 
   return (
     <section className="space-y-6">
-      <div className="surface-card rounded-[2rem] bg-[linear-gradient(180deg,rgba(255,255,255,0.22),rgba(244,240,224,0.12))] p-6 shadow-[0_20px_60px_rgba(75,85,56,0.12)] dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(163,163,163,0.01))] sm:p-8">
+      <div className="surface-card rounded-[2rem] bg-[linear-gradient(180deg,rgba(255,251,240,0.82),rgba(245,238,221,0.52))] p-6 shadow-[0_18px_48px_rgba(75,85,56,0.1)] dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(163,163,163,0.01))] sm:p-8">
         <p className="text-xs font-bold uppercase tracking-[0.26em] text-emerald-800 dark:text-emerald-300">
           Dashboard overview
         </p>
@@ -461,7 +461,7 @@ export default function DashboardPage() {
       </div>
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)]">
-        <article className="surface-card rounded-[1.75rem] bg-[linear-gradient(135deg,rgba(5,150,105,0.16),rgba(255,255,255,0.08))] p-6 shadow-[0_24px_60px_rgba(5,150,105,0.12)] dark:bg-[linear-gradient(135deg,rgba(16,185,129,0.16),rgba(255,255,255,0.03))] sm:p-7">
+        <article className="surface-card rounded-[1.75rem] bg-[linear-gradient(135deg,rgba(5,150,105,0.2),rgba(248,244,232,0.72))] p-6 shadow-[0_20px_46px_rgba(5,150,105,0.1)] dark:bg-[linear-gradient(135deg,rgba(16,185,129,0.16),rgba(255,255,255,0.03))] sm:p-7">
           <p className="text-xs font-bold uppercase tracking-[0.24em] text-emerald-800 dark:text-emerald-300">
             Live budget
           </p>
@@ -478,13 +478,13 @@ export default function DashboardPage() {
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2 xl:w-[23rem] xl:flex-none">
-              <div className="rounded-2xl border border-white/40 bg-white/45 px-4 py-4 backdrop-blur dark:border-white/10 dark:bg-white/5">
+              <div className="rounded-2xl border border-emerald-200/70 bg-[rgba(255,251,244,0.74)] px-4 py-4 backdrop-blur dark:border-white/10 dark:bg-white/5">
                 <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Income in view</p>
                 <p className="mt-2 text-xl font-semibold text-foreground">
                   {toCurrency(scopedTotals.totalIncome)}
                 </p>
               </div>
-              <div className="rounded-2xl border border-white/40 bg-white/45 px-4 py-4 backdrop-blur dark:border-white/10 dark:bg-white/5">
+              <div className="rounded-2xl border border-emerald-200/70 bg-[rgba(255,251,244,0.74)] px-4 py-4 backdrop-blur dark:border-white/10 dark:bg-white/5">
                 <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Committed costs</p>
                 <p className="mt-2 text-xl font-semibold text-foreground">
                   {toCurrency(
@@ -525,7 +525,7 @@ export default function DashboardPage() {
         {summaryCards.map(([title, value, body]) => (
           <article
             key={title}
-            className="surface-card rounded-[1.5rem] bg-[linear-gradient(180deg,rgba(255,255,255,0.14),rgba(255,255,255,0.06))] p-5 dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.015))]"
+            className="surface-card rounded-[1.5rem] bg-[linear-gradient(180deg,rgba(255,252,246,0.78),rgba(244,239,226,0.42))] p-5 dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.015))]"
           >
             <p className="text-xs font-bold uppercase tracking-[0.24em] text-amber-700 dark:text-amber-300">{title}</p>
             <p className="mt-3 text-2xl font-bold tracking-[-0.05em] text-foreground">{value}</p>
