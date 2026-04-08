@@ -53,6 +53,6 @@ npm run preview
 - Your budget data stays in the browser unless you export it.
 - Import/export is available for backup and restore.
 
-## Status
+## License
 
-Tantiya is currently in active development.
+MIT
