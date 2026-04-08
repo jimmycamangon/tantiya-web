@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import { exportBudgetData } from '@/features/budget/storage'
+import { BUDGET_STORAGE_KEY } from '@/features/budget/constants'
 import { useBudgetStore } from '@/hooks/useBudgetStore'
 import {
   getDefaultUserProfile,
@@ -18,6 +19,12 @@ const downloadTextFile = (filename: string, content: string) => {
   anchor.download = filename
   anchor.click()
   URL.revokeObjectURL(url)
+}
+
+const formatStorageSize = (bytes: number) => {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
 }
 
 export default function SettingsPage() {
@@ -43,6 +50,27 @@ export default function SettingsPage() {
     }),
     [budgetData],
   )
+
+  const storageSnapshot = useMemo(() => {
+    const rawBudgetJson = exportBudgetData(budgetData)
+    const rawStoredValue =
+      typeof window !== 'undefined' ? window.localStorage.getItem(BUDGET_STORAGE_KEY) ?? rawBudgetJson : rawBudgetJson
+    const profileJson =
+      typeof window !== 'undefined' ? window.localStorage.getItem('tantiya_user_profile') ?? '' : ''
+    const budgetBytes = new Blob([rawStoredValue]).size
+    const profileBytes = new Blob([profileJson]).size
+    const totalBytes = budgetBytes + profileBytes
+    const estimatedLimitBytes = 5 * 1024 * 1024
+    const usagePercent = Math.min((totalBytes / estimatedLimitBytes) * 100, 100)
+
+    return {
+      budgetBytes,
+      profileBytes,
+      totalBytes,
+      estimatedLimitBytes,
+      usagePercent,
+    }
+  }, [budgetData])
 
   const profileInitials = useMemo(() => getProfileInitials(profileForm), [profileForm])
 
@@ -374,6 +402,52 @@ export default function SettingsPage() {
                 <span className="text-muted-foreground">Quick presets</span>
                 <span className="font-semibold text-foreground">{stats.presets}</span>
               </div>
+            </div>
+
+            <div className="mt-5 rounded-2xl border border-dashed border-border px-4 py-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Estimated storage usage</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Approximate browser usage for Tantiya budget data and profile info.
+                  </p>
+                </div>
+                <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-foreground">
+                  {storageSnapshot.usagePercent.toFixed(1)}%
+                </span>
+              </div>
+
+              <div className="mt-4 h-3 overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full rounded-full bg-emerald-700 dark:bg-emerald-500"
+                  style={{ width: `${Math.max(storageSnapshot.usagePercent, 2)}%` }}
+                />
+              </div>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                <div className="rounded-xl bg-muted/50 px-4 py-3">
+                  <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Budget data</p>
+                  <p className="mt-2 font-semibold text-foreground">
+                    {formatStorageSize(storageSnapshot.budgetBytes)}
+                  </p>
+                </div>
+                <div className="rounded-xl bg-muted/50 px-4 py-3">
+                  <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Profile data</p>
+                  <p className="mt-2 font-semibold text-foreground">
+                    {formatStorageSize(storageSnapshot.profileBytes)}
+                  </p>
+                </div>
+                <div className="rounded-xl bg-muted/50 px-4 py-3">
+                  <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Estimated total</p>
+                  <p className="mt-2 font-semibold text-foreground">
+                    {formatStorageSize(storageSnapshot.totalBytes)}
+                  </p>
+                </div>
+              </div>
+
+              <p className="mt-4 text-sm leading-6 text-muted-foreground">
+                Browsers often allow around {formatStorageSize(storageSnapshot.estimatedLimitBytes)} for localStorage per site. Tantiya can usually store years of normal budget records, but large profile images and very long histories will use space faster.
+              </p>
             </div>
           </section>
 
