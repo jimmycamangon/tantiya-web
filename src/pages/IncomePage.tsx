@@ -159,7 +159,7 @@ export default function IncomePage() {
             <p
               className={[
                 'mt-2 text-2xl font-bold tracking-[-0.04em]',
-                incomeDifference >= 0 ? 'text-emerald-800 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300',
+                incomeDifference >= 0 ? 'emerald-copy' : 'text-amber-700 dark:text-amber-300',
               ].join(' ')}
             >
               {toCurrency(incomeDifference)}

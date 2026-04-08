@@ -44,7 +44,7 @@ export default function DashboardSidebar({
                 <p className="truncate text-base font-extrabold uppercase tracking-[0.28em] text-foreground">
                   Tantiya
                 </p>
-                <p className="mt-0.5 truncate text-[11px] font-medium uppercase tracking-[0.18em] text-emerald-800 dark:text-emerald-300">
+                <p className="emerald-copy mt-0.5 truncate text-[11px] font-medium uppercase tracking-[0.18em]">
                   Local budget workspace
                 </p>
                 <p className="muted-copy mt-1 truncate text-xs">

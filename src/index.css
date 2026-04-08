@@ -55,6 +55,8 @@ a {
   --border: oklch(0.84 0.018 95);
   --input: oklch(0.89 0.015 95);
   --ring: oklch(0.62 0.04 120);
+  --emerald-copy: #0f5132;
+  --emerald-copy-soft: #166534;
   --chart-1: oklch(0.62 0.16 40);
   --chart-2: oklch(0.58 0.1 170);
   --chart-3: oklch(0.45 0.08 240);
@@ -93,6 +95,8 @@ a {
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 14%);
   --ring: oklch(0.68 0.03 120);
+  --emerald-copy: #86efac;
+  --emerald-copy-soft: #bbf7d0;
   --chart-1: oklch(0.54 0.22 265);
   --chart-2: oklch(0.68 0.16 160);
   --chart-3: oklch(0.76 0.16 70);
@@ -186,6 +190,14 @@ body,
 
   .muted-copy {
     @apply text-muted-foreground;
+  }
+
+  .emerald-copy {
+    color: var(--emerald-copy);
+  }
+
+  .emerald-copy-soft {
+    color: var(--emerald-copy-soft);
   }
 
   .ui-button {

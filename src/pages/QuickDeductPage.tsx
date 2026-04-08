@@ -72,7 +72,7 @@ export default function QuickDeductPage() {
           <section className="surface-card rounded-[1.75rem] border border-emerald-300/60 bg-[linear-gradient(135deg,rgba(5,150,105,0.14),rgba(255,255,255,0.08))] p-5 shadow-[0_20px_50px_rgba(5,150,105,0.12)] dark:border-emerald-800/60 dark:bg-[linear-gradient(135deg,rgba(16,185,129,0.12),rgba(255,255,255,0.02))]">
             <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.24em] text-emerald-800 dark:text-emerald-300">
+                <p className="emerald-copy text-xs font-bold uppercase tracking-[0.24em]">
                   Ready to deduct
                 </p>
                 <p className="mt-3 text-4xl font-bold tracking-[-0.06em] text-foreground">
@@ -329,7 +329,7 @@ export default function QuickDeductPage() {
       <div className="sticky bottom-4 z-30 md:hidden">
         <div className="surface-card mx-auto flex items-center justify-between gap-3 rounded-2xl border border-emerald-300/60 bg-[linear-gradient(135deg,rgba(5,150,105,0.16),rgba(255,255,255,0.08))] px-4 py-3 shadow-[0_20px_40px_rgba(15,23,42,0.14)] dark:border-emerald-800/60 dark:bg-[linear-gradient(135deg,rgba(16,185,129,0.14),rgba(255,255,255,0.02))]">
           <div className="min-w-0">
-            <p className="text-xs uppercase tracking-[0.18em] text-emerald-800 dark:text-emerald-300">
+            <p className="emerald-copy text-xs uppercase tracking-[0.18em]">
               Selected tap
             </p>
             <p className="mt-1 truncate text-lg font-semibold text-foreground">

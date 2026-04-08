@@ -9,7 +9,7 @@ export default function LandingPage() {
           <div className="grid gap-10 px-6 py-8 sm:px-8 sm:py-10 lg:grid-cols-[minmax(0,1fr)_18rem] lg:gap-8 lg:px-10 lg:py-12">
             <div className="space-y-7">
               <div className="flex flex-wrap items-center gap-3">
-                <div className="inline-flex items-center gap-2 rounded-full border border-emerald-900/10 bg-emerald-900/5 px-4 py-2 text-xs font-bold uppercase tracking-[0.28em] text-emerald-900 dark:border-emerald-300/15 dark:bg-emerald-300/8 dark:text-emerald-300">
+                <div className="emerald-copy inline-flex items-center gap-2 rounded-full border border-emerald-900/10 bg-emerald-900/5 px-4 py-2 text-xs font-bold uppercase tracking-[0.28em] dark:border-emerald-300/15 dark:bg-emerald-300/8">
                   Budget pulse tracker
                 </div>
                 <div className="inline-flex items-center rounded-full border border-border bg-card/70 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">

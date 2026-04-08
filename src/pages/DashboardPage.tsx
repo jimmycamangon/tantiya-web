@@ -419,7 +419,7 @@ export default function DashboardPage() {
   return (
     <section className="space-y-6">
       <div className="surface-card rounded-[2rem] bg-[linear-gradient(180deg,rgba(255,251,240,0.82),rgba(245,238,221,0.52))] p-6 shadow-[0_18px_48px_rgba(75,85,56,0.1)] dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(163,163,163,0.01))] sm:p-8">
-        <p className="text-xs font-bold uppercase tracking-[0.26em] text-emerald-800 dark:text-emerald-300">
+        <p className="emerald-copy text-xs font-bold uppercase tracking-[0.26em]">
           Dashboard overview
         </p>
         <h2 className="mt-3 text-3xl font-bold tracking-[-0.05em] text-foreground">
@@ -443,7 +443,7 @@ export default function DashboardPage() {
         </div>
 
         {cycleNotice && (
-          <div className="mt-6 rounded-2xl border border-emerald-300/70 bg-emerald-50/80 px-4 py-4 dark:border-emerald-800/70 dark:bg-emerald-950/20">
+          <div className="emerald-copy mt-6 rounded-2xl border border-emerald-400/70 bg-emerald-100/90 px-4 py-4 dark:border-emerald-800/70 dark:bg-emerald-950/20">
             <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
               <div>
                 <p className="font-semibold text-foreground">New budget cycle detected</p>
@@ -462,7 +462,7 @@ export default function DashboardPage() {
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)]">
         <article className="surface-card rounded-[1.75rem] bg-[linear-gradient(135deg,rgba(5,150,105,0.2),rgba(248,244,232,0.72))] p-6 shadow-[0_20px_46px_rgba(5,150,105,0.1)] dark:bg-[linear-gradient(135deg,rgba(16,185,129,0.16),rgba(255,255,255,0.03))] sm:p-7">
-          <p className="text-xs font-bold uppercase tracking-[0.24em] text-emerald-800 dark:text-emerald-300">
+          <p className="emerald-copy text-xs font-bold uppercase tracking-[0.24em]">
             Live budget
           </p>
           <div className="mt-4 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
@@ -508,7 +508,7 @@ export default function DashboardPage() {
                 className={[
                   'mt-3 text-2xl font-bold tracking-[-0.05em]',
                   card.tone === 'emerald'
-                    ? 'text-emerald-800 dark:text-emerald-300'
+                    ? 'emerald-copy'
                     : card.tone === 'amber'
                       ? 'text-amber-700 dark:text-amber-300'
                       : 'text-foreground',
