@@ -34,6 +34,12 @@ export default function DashboardTopbar({
   profile,
   profileInitials,
 }: DashboardTopbarProps) {
+  const todayLabel = new Date().toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+
   return (
     <header className="top-nav-shell relative z-40 flex h-16 items-center justify-between overflow-visible px-6">
       <div className="flex items-center gap-3">
@@ -49,12 +55,23 @@ export default function DashboardTopbar({
           <Menu className="h-4 w-4" />
         </button>
         <div className="min-w-0">
-          <h1 className="truncate text-lg font-semibold leading-tight text-foreground">
-            {currentRoute.title}
-          </h1>
-          <p className="muted-copy hidden text-sm md:block">
-            {currentRoute.description ?? 'Manage your Tantiya budget workspace.'}
-          </p>
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="hidden rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground md:inline-flex">
+              Tantiya
+            </span>
+            <h1 className="truncate text-lg font-semibold leading-tight text-foreground">
+              {currentRoute.title}
+            </h1>
+          </div>
+          <div className="mt-0.5 hidden items-center gap-2 text-sm md:flex">
+            <p className="muted-copy">
+              {currentRoute.description ?? 'Manage your Tantiya budget workspace.'}
+            </p>
+            <span className="text-muted-foreground/40">•</span>
+            <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+              {todayLabel}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -85,26 +102,43 @@ export default function DashboardTopbar({
           <button
             type="button"
             onClick={onToggleProfileMenu}
-            className="inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-border bg-card transition-colors hover:bg-accent"
+            className="inline-flex items-center gap-2 overflow-hidden rounded-full border border-border bg-card px-1 py-1 transition-colors hover:bg-accent"
             aria-label="Open profile menu"
           >
             {profile.avatarDataUrl ? (
               <img
                 src={profile.avatarDataUrl}
                 alt={`${profile.fullName} avatar`}
-                className="h-full w-full object-cover"
+                className="h-8 w-8 rounded-full object-cover"
               />
             ) : (
-              <span className="text-xs font-semibold text-foreground">{profileInitials}</span>
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-accent text-xs font-semibold text-foreground">
+                {profileInitials}
+              </span>
             )}
+            <span className="hidden pr-2 text-left md:block">
+              <span className="block max-w-[10rem] truncate text-xs font-semibold text-foreground">
+                {profile.fullName}
+              </span>
+              <span className="block max-w-[10rem] truncate text-[11px] text-muted-foreground">
+                {profile.title}
+              </span>
+            </span>
           </button>
 
           {showProfileMenu && (
-            <div className="surface-card absolute right-0 top-12 z-50 w-52 p-2 shadow-xl">
+            <div className="surface-card absolute right-0 top-14 z-50 w-64 p-2 shadow-xl">
+              <div className="rounded-xl bg-muted/50 px-3 py-3">
+                <p className="text-sm font-semibold text-foreground">{profile.fullName}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{profile.title}</p>
+                {profile.focusArea && (
+                  <p className="mt-2 text-xs leading-5 text-muted-foreground">{profile.focusArea}</p>
+                )}
+              </div>
               <button
                 type="button"
                 onClick={onNavigateSettings}
-                className="w-full rounded-md px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-accent"
+                className="mt-2 w-full rounded-xl px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-accent"
               >
                 Settings and backup
               </button>

@@ -72,6 +72,15 @@ const normalizeQuickAmountPresets = (presets: BudgetSettings['quickAmountPresets
   }))
 }
 
+type SetupSectionId =
+  | 'income'
+  | 'quick-presets'
+  | 'fixed-expenses'
+  | 'payroll-deductions'
+  | 'cutoff-rules'
+  | 'housing'
+  | 'preview'
+
 export default function SetupPage() {
   const navigate = useNavigate()
   const { budgetData, setSettings } = useBudgetStore()
@@ -79,15 +88,34 @@ export default function SetupPage() {
   const [saveState, setSaveState] = useState<'idle' | 'saved'>('idle')
   const [newPresetValue, setNewPresetValue] = useState('')
   const [previewScope, setPreviewScope] = useState<'whole-month' | 'current-cutoff' | string>('whole-month')
+  const [isCompactSetup, setIsCompactSetup] = useState(false)
+  const [activeSetupSection, setActiveSetupSection] = useState<SetupSectionId>('income')
 
   useEffect(() => {
     setForm(cloneSettings(budgetData.settings))
   }, [budgetData.settings])
 
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) {
+      return
+    }
+
+    const mediaQuery = window.matchMedia('(max-width: 1279px)')
+    const applyMatch = (matches: boolean) => setIsCompactSetup(matches)
+
+    applyMatch(mediaQuery.matches)
+
+    const handleChange = (event: MediaQueryListEvent) => applyMatch(event.matches)
+
+    mediaQuery.addEventListener('change', handleChange)
+
+    return () => mediaQuery.removeEventListener('change', handleChange)
+  }, [])
+
   const fixedExpenseTotal = useMemo(
     () =>
       form.fixedExpenses.reduce((sum, expense) => {
-        if (!expense.isActive) return sum
+        if (!expense.isActive || expense.budgetApplication !== 'whole-month') return sum
         return sum + expense.amount
       }, 0),
     [form.fixedExpenses],
@@ -119,8 +147,10 @@ export default function SetupPage() {
     [form.cutoffs],
   )
   const currentMatchedCutoff = useMemo(
-    () => getCutoffForDate(new Date(), activeCutoffs),
-    [activeCutoffs],
+    () =>
+      activeCutoffs.find((cutoff) => cutoff.id === form.activeCutoffId) ??
+      getCutoffForDate(new Date(), activeCutoffs),
+    [activeCutoffs, form.activeCutoffId],
   )
 
   const activeHousingAmount = useMemo(() => getHousingCost(form.housingPlan), [form.housingPlan])
@@ -153,6 +183,8 @@ export default function SetupPage() {
           name: '',
           amount: 0,
           category: 'bills',
+          budgetApplication: 'whole-month',
+          cutoffDueDays: {},
           isActive: true,
         },
       ],
@@ -305,6 +337,19 @@ export default function SetupPage() {
     }
   }, [activeCutoffs, form.viewMode, previewScope])
 
+  useEffect(() => {
+    if (form.viewMode !== 'cutoff') {
+      return
+    }
+
+    if (form.activeCutoffId && !activeCutoffs.some((cutoff) => cutoff.id === form.activeCutoffId)) {
+      setForm((current) => ({
+        ...current,
+        activeCutoffId: undefined,
+      }))
+    }
+  }, [activeCutoffs, form.activeCutoffId, form.viewMode])
+
   const previewData = useMemo(() => {
     const activeCutoffCount = activeCutoffs.length
     const wholeMonthAllowance = allowanceAmountInSummary
@@ -364,7 +409,10 @@ export default function SetupPage() {
           : 0
     const focusedFixed = form.fixedExpenses.reduce((sum, expense) => {
       if (!expense.isActive) return sum
-      if (expense.cutoffId && expense.cutoffId !== focusedCutoff.id) return sum
+      if (expense.budgetApplication === 'whole-month') return sum
+      if (expense.budgetApplication === 'specific-cutoff' && expense.cutoffId !== focusedCutoff.id) {
+        return sum
+      }
       return sum + expense.amount
     }, 0)
     const focusedPayroll = form.payrollDeductions.reduce((sum, deduction) => {
@@ -409,11 +457,124 @@ export default function SetupPage() {
     previewScope,
   ])
 
+  const setupSections = useMemo(() => {
+    const hasIncomeReady =
+      form.viewMode === 'monthly'
+        ? form.monthlyIncomeTarget > 0
+        : activeCutoffs.some((cutoff) => (cutoff.expectedIncomeAmount ?? 0) > 0)
+    const enabledFixedExpenses = form.fixedExpenses.filter((expense) => expense.isActive)
+    const enabledDeductions = form.payrollDeductions.filter((deduction) => deduction.enabled)
+    const housingReady = !form.housingPlan.enabled || activeHousingAmount > 0
+    const cutoffReady = form.viewMode === 'monthly' || activeCutoffs.length > 0
+
+    return [
+      {
+        id: 'income' as const,
+        title: 'Income',
+        description: 'Choose your budget mode, planned income, and optional allowance.',
+        ready: hasIncomeReady,
+        status: hasIncomeReady
+          ? form.viewMode === 'cutoff'
+            ? `${activeCutoffs.filter((cutoff) => (cutoff.expectedIncomeAmount ?? 0) > 0).length} cutoff income row(s) ready`
+            : 'Monthly target is set'
+          : 'Set your main income first',
+      },
+      {
+        id: 'quick-presets' as const,
+        title: 'Quick presets',
+        description: 'Pick the amounts that appear in Quick Deduct.',
+        ready: form.quickAmountPresets.length > 0,
+        status: `${form.quickAmountPresets.length} preset amount(s)`,
+      },
+      {
+        id: 'fixed-expenses' as const,
+        title: 'Fixed expenses',
+        description: 'Add recurring bills and cutoff/month assignment rules.',
+        ready: enabledFixedExpenses.length > 0,
+        status:
+          enabledFixedExpenses.length > 0
+            ? `${enabledFixedExpenses.length} active recurring bill(s)`
+            : 'Optional, but recommended',
+      },
+      {
+        id: 'payroll-deductions' as const,
+        title: 'Payroll deductions',
+        description: 'Track SSS, Pag-IBIG, PhilHealth, WTax, or custom deduction rows.',
+        ready: true,
+        status:
+          enabledDeductions.length > 0
+            ? `${enabledDeductions.length} deduction row(s) enabled`
+            : 'Optional section',
+      },
+      {
+        id: 'cutoff-rules' as const,
+        title: 'Cutoff rules',
+        description: 'Define salary periods, payout offsets, and active cutoff behavior.',
+        ready: cutoffReady,
+        status:
+          form.viewMode === 'monthly'
+            ? 'Not needed in monthly mode'
+            : `${activeCutoffs.length} active cutoff(s)`,
+      },
+      {
+        id: 'housing' as const,
+        title: 'Housing',
+        description: 'Set equity or amortization and how housing affects the budget.',
+        ready: housingReady,
+        status:
+          !form.housingPlan.enabled
+            ? 'Optional section'
+            : `Using PHP ${activeHousingAmount.toLocaleString()} right now`,
+      },
+      {
+        id: 'preview' as const,
+        title: 'Preview',
+        description: 'Review the live budget effect before saving.',
+        ready: true,
+        status: `${previewData.label} preview ready`,
+      },
+    ]
+  }, [
+    activeCutoffs,
+    activeHousingAmount,
+    form.fixedExpenses,
+    form.housingPlan.enabled,
+    form.monthlyIncomeTarget,
+    form.payrollDeductions,
+    form.quickAmountPresets.length,
+    form.viewMode,
+    previewData.label,
+  ])
+
+  const completedSections = setupSections.filter((section) => section.ready).length
+  const sectionIds = setupSections.map((section) => section.id)
+  const activeSectionIndex = Math.max(sectionIds.indexOf(activeSetupSection), 0)
+  const previousSectionId = activeSectionIndex > 0 ? sectionIds[activeSectionIndex - 1] : null
+  const nextSectionId =
+    activeSectionIndex < sectionIds.length - 1 ? sectionIds[activeSectionIndex + 1] : null
+
+  const getSectionClassName = (sectionId: SetupSectionId, baseClassName: string) =>
+    [
+      baseClassName,
+      isCompactSetup && activeSetupSection !== sectionId ? 'hidden' : '',
+    ]
+      .filter(Boolean)
+      .join(' ')
+
+  const jumpToSection = (sectionId: SetupSectionId) => {
+    setActiveSetupSection(sectionId)
+    document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
   const saveSetup = () => {
     const normalizedPresets = normalizeQuickAmountPresets(form.quickAmountPresets)
 
     const normalized: BudgetSettings = {
       ...form,
+      activeCutoffId:
+        form.activeCutoffId && form.cutoffs.some((cutoff) => cutoff.id === form.activeCutoffId && cutoff.isActive)
+          ? form.activeCutoffId
+          : undefined,
       fixedExpenses: form.fixedExpenses.filter((expense) => expense.name.trim().length > 0),
       cutoffs: form.cutoffs.filter((cutoff) => cutoff.label.trim().length > 0),
       quickAmountPresets:
@@ -447,13 +608,98 @@ export default function SetupPage() {
             Go to dashboard
           </button>
         </div>
+
+        <div className="mt-6 grid gap-3 lg:grid-cols-[220px_minmax(0,1fr)]">
+          <div className="rounded-2xl border border-border bg-card/60 px-4 py-4">
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-amber-700 dark:text-amber-300">
+              Setup progress
+            </p>
+            <p className="mt-3 text-3xl font-bold tracking-[-0.05em] text-foreground">
+              {completedSections}/{setupSections.length}
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Move through the sections in order, then review the preview on the right before saving.
+            </p>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {setupSections.map((section) => (
+              <button
+                key={section.id}
+                type="button"
+                onClick={() => jumpToSection(section.id)}
+                className="rounded-2xl border border-border bg-card/60 px-4 py-4 text-left transition hover:border-emerald-400/70 hover:bg-card"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <p className="font-semibold text-foreground">{section.title}</p>
+                  <span
+                    className={[
+                      'rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em]',
+                      section.ready
+                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300'
+                        : 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300',
+                    ].join(' ')}
+                  >
+                    {section.ready ? 'Ready' : 'Needs input'}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">{section.description}</p>
+                <p className="mt-3 text-xs font-medium text-foreground/80">{section.status}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {isCompactSetup && (
+          <div className="mt-6 rounded-2xl border border-border bg-card/60 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.22em] text-amber-700 dark:text-amber-300">
+                  Mobile setup flow
+                </p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Focus on one section at a time. Use next and back to move through the setup.
+                </p>
+              </div>
+              <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-foreground">
+                Step {activeSectionIndex + 1} of {sectionIds.length}
+              </span>
+            </div>
+
+            <div className="mt-4 overflow-x-auto pb-1">
+              <div className="flex min-w-max gap-2">
+                {setupSections.map((section, index) => (
+                  <button
+                    key={section.id}
+                    type="button"
+                    onClick={() => jumpToSection(section.id)}
+                    className={[
+                      'rounded-full border px-4 py-2 text-sm font-medium transition',
+                      activeSetupSection === section.id
+                        ? 'border-emerald-700 bg-emerald-700 text-white dark:border-emerald-500 dark:bg-emerald-500 dark:text-emerald-950'
+                        : 'border-border bg-background text-foreground hover:border-emerald-400/70',
+                    ].join(' ')}
+                  >
+                    {index + 1}. {section.title}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
         <div className="space-y-4">
-          <section className="surface-card rounded-[1.75rem] p-5">
+          <section
+            id="income"
+            className={getSectionClassName('income', 'surface-card rounded-[1.75rem] p-5 scroll-mt-24')}
+          >
             <p className="text-xs font-bold uppercase tracking-[0.24em] text-amber-700 dark:text-amber-300">
               Income
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Start here first. This tells Tantiya whether you are budgeting by month or by payroll cutoff.
             </p>
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <label className="space-y-2 md:col-span-2">
@@ -601,7 +847,10 @@ export default function SetupPage() {
             </div>
           </section>
 
-          <section className="surface-card rounded-[1.75rem] p-5">
+          <section
+            id="quick-presets"
+            className={getSectionClassName('quick-presets', 'surface-card rounded-[1.75rem] p-5 scroll-mt-24')}
+          >
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.24em] text-amber-700 dark:text-amber-300">
@@ -682,7 +931,10 @@ export default function SetupPage() {
             </div>
           </section>
 
-          <section className="surface-card rounded-[1.75rem] p-5">
+          <section
+            id="fixed-expenses"
+            className={getSectionClassName('fixed-expenses', 'surface-card rounded-[1.75rem] p-5 scroll-mt-24')}
+          >
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.24em] text-amber-700 dark:text-amber-300">
@@ -706,66 +958,195 @@ export default function SetupPage() {
                 form.fixedExpenses.map((expense) => (
                   <div
                     key={expense.id}
-                    className="grid gap-3 rounded-2xl border border-border bg-card/60 p-4 md:grid-cols-[minmax(0,1fr)_9rem_10rem_auto_auto]"
+                    className="rounded-2xl border border-border bg-card/60 p-4"
                   >
-                    <input
-                      type="text"
-                      value={expense.name}
-                      onChange={(event) =>
-                        updateFixedExpense(expense.id, { name: event.target.value })
-                      }
-                      className="ui-input"
-                      placeholder="Electric bill"
-                    />
-                    <input
-                      type="number"
-                      min="0"
-                      value={expense.amount}
-                      onChange={(event) =>
-                        updateFixedExpense(expense.id, { amount: toNumber(event.target.value) })
-                      }
-                      className="ui-input"
-                      placeholder="0"
-                    />
-                    <select
-                      value={expense.category}
-                      onChange={(event) =>
-                        updateFixedExpense(expense.id, {
-                          category: event.target.value as ExpenseCategory | 'loan' | 'utilities',
-                        })
-                      }
-                      className="ui-input"
-                    >
-                      {categoryOptions.map((category) => (
-                        <option key={category} value={category}>
-                          {category}
-                        </option>
-                      ))}
-                    </select>
-                    <label className="flex items-center gap-2 text-sm text-foreground">
-                      <input
-                        type="checkbox"
-                        checked={expense.isActive}
-                        onChange={(event) =>
-                          updateFixedExpense(expense.id, { isActive: event.target.checked })
-                        }
-                      />
-                      Active
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => removeFixedExpense(expense.id)}
-                      className="ui-button-subtle"
-                    >
-                      Remove
-                    </button>
+                    <div className="grid gap-3 lg:grid-cols-[minmax(0,1.2fr)_auto] lg:items-end">
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <input
+                          type="text"
+                          value={expense.name}
+                          onChange={(event) =>
+                            updateFixedExpense(expense.id, { name: event.target.value })
+                          }
+                          className="ui-input"
+                          placeholder="Electric bill"
+                        />
+                        <input
+                          type="number"
+                          min="0"
+                          value={expense.amount}
+                          onChange={(event) =>
+                            updateFixedExpense(expense.id, { amount: toNumber(event.target.value) })
+                          }
+                          className="ui-input"
+                          placeholder="0"
+                        />
+                        <select
+                          value={expense.category}
+                          onChange={(event) =>
+                            updateFixedExpense(expense.id, {
+                              category: event.target.value as ExpenseCategory | 'loan' | 'utilities',
+                            })
+                          }
+                          className="ui-input"
+                        >
+                          {categoryOptions.map((category) => (
+                            <option key={category} value={category}>
+                              {category}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-3 lg:justify-end">
+                        <label className="flex items-center gap-2 text-sm text-foreground">
+                          <input
+                            type="checkbox"
+                            checked={expense.isActive}
+                            onChange={(event) =>
+                              updateFixedExpense(expense.id, { isActive: event.target.checked })
+                            }
+                          />
+                          Active
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => removeFixedExpense(expense.id)}
+                          className="ui-button-subtle"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                      <label className="space-y-2">
+                        <span className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                          Apply to
+                        </span>
+                        <select
+                          value={
+                            expense.budgetApplication === 'specific-cutoff'
+                              ? expense.cutoffId ?? 'whole-month'
+                              : expense.budgetApplication
+                          }
+                          onChange={(event) => {
+                            const value = event.target.value
+                            updateFixedExpense(expense.id, {
+                              budgetApplication:
+                                value === 'every-cutoff'
+                                  ? 'every-cutoff'
+                                  : value === 'whole-month'
+                                    ? 'whole-month'
+                                    : 'specific-cutoff',
+                              cutoffId:
+                                value === 'every-cutoff' || value === 'whole-month'
+                                  ? undefined
+                                  : value,
+                            })
+                          }}
+                          className="ui-input"
+                        >
+                          <option value="whole-month">Whole month</option>
+                          {form.viewMode === 'cutoff' && (
+                            <option value="every-cutoff">Every cutoff</option>
+                          )}
+                          {form.viewMode === 'cutoff' &&
+                            activeCutoffs.map((cutoff) => (
+                              <option key={cutoff.id} value={cutoff.id}>
+                                {cutoff.label}
+                              </option>
+                            ))}
+                        </select>
+                      </label>
+
+                      <label className="space-y-2">
+                        <span className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                          Due day
+                        </span>
+                        <input
+                          type="number"
+                          min="1"
+                          max="31"
+                          value={
+                            expense.budgetApplication === 'every-cutoff'
+                              ? ''
+                              : expense.dueDay ?? ''
+                          }
+                          onChange={(event) =>
+                            updateFixedExpense(expense.id, {
+                              dueDay: event.target.value ? toDayNumber(event.target.value) : undefined,
+                            })
+                          }
+                          className="ui-input"
+                          placeholder="10"
+                          disabled={expense.budgetApplication === 'every-cutoff'}
+                        />
+                      </label>
+
+                      <div className="rounded-2xl border border-dashed border-border px-4 py-3 text-sm text-muted-foreground">
+                        {expense.budgetApplication === 'whole-month'
+                          ? 'This bill reduces the whole-month budget once.'
+                          : expense.budgetApplication === 'every-cutoff'
+                            ? 'This bill repeats in every active cutoff.'
+                            : `This bill only affects ${
+                                activeCutoffs.find((cutoff) => cutoff.id === expense.cutoffId)?.label ??
+                              'the selected cutoff'
+                              }.`}
+                      </div>
+                    </div>
+
+                    {expense.budgetApplication === 'every-cutoff' && form.viewMode === 'cutoff' && (
+                      <div className="mt-4 rounded-2xl border border-dashed border-border px-4 py-4">
+                        <p className="text-sm font-medium text-foreground">
+                          Due day per cutoff
+                        </p>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          Set a different reminder day for each cutoff while keeping this as one recurring bill.
+                        </p>
+
+                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                          {activeCutoffs.map((cutoff) => (
+                            <label key={`${expense.id}-${cutoff.id}`} className="space-y-2">
+                              <span className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                                {cutoff.label}
+                              </span>
+                              <input
+                                type="number"
+                                min="1"
+                                max="31"
+                                value={expense.cutoffDueDays?.[cutoff.id] ?? ''}
+                                onChange={(event) => {
+                                  const nextCutoffDueDays = { ...(expense.cutoffDueDays ?? {}) }
+
+                                  if (event.target.value) {
+                                    nextCutoffDueDays[cutoff.id] = toDayNumber(event.target.value)
+                                  } else {
+                                    delete nextCutoffDueDays[cutoff.id]
+                                  }
+
+                                  updateFixedExpense(expense.id, {
+                                    cutoffDueDays: nextCutoffDueDays,
+                                  })
+                                }}
+                                className="ui-input"
+                                placeholder={cutoff.id === activeCutoffs[0]?.id ? '26' : '11'}
+                              />
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))
               )}
             </div>
           </section>
 
-          <section className="surface-card rounded-[1.75rem] p-5">
+          <section
+            id="payroll-deductions"
+            className={getSectionClassName('payroll-deductions', 'surface-card rounded-[1.75rem] p-5 scroll-mt-24')}
+          >
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.24em] text-amber-700 dark:text-amber-300">
@@ -917,7 +1298,10 @@ export default function SetupPage() {
             </div>
           </section>
 
-          <section className="surface-card rounded-[1.75rem] p-5">
+          <section
+            id="cutoff-rules"
+            className={getSectionClassName('cutoff-rules', 'surface-card rounded-[1.75rem] p-5 scroll-mt-24')}
+          >
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.24em] text-amber-700 dark:text-amber-300">
@@ -946,7 +1330,37 @@ export default function SetupPage() {
                   affect your totals until you switch to cutoff tracking.
                 </div>
               ) : (
-                <div className="max-h-[28rem] space-y-3 overflow-y-auto pr-1">
+                <div className="space-y-4">
+                  <div className="rounded-2xl border border-dashed border-border px-4 py-4">
+                    <label className="space-y-2">
+                      <span className="text-sm font-medium text-foreground">Active cutoff for budget view</span>
+                      <select
+                        value={form.activeCutoffId ?? 'automatic'}
+                        onChange={(event) =>
+                          setForm((current) => ({
+                            ...current,
+                            activeCutoffId:
+                              event.target.value === 'automatic' ? undefined : event.target.value,
+                          }))
+                        }
+                        className="ui-input"
+                      >
+                        <option value="automatic">Automatic by today&apos;s date</option>
+                        {activeCutoffs.map((cutoff) => (
+                          <option key={cutoff.id} value={cutoff.id}>
+                            {cutoff.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      Leave this on automatic if today&apos;s date should decide the active cutoff.
+                      Pick a specific cutoff if you want Tantiya to force the current budget view to
+                      one payroll period.
+                    </p>
+                  </div>
+
+                  <div className="max-h-[28rem] space-y-3 overflow-y-auto pr-1">
                   {form.cutoffs.map((cutoff) => (
                     <div
                       key={cutoff.id}
@@ -1069,13 +1483,17 @@ export default function SetupPage() {
                     </div>
                   ))}
                 </div>
+                </div>
               )}
             </div>
           </section>
         </div>
 
-        <div className="space-y-4">
-          <section className="surface-card rounded-[1.75rem] p-5">
+        <div className="space-y-4 xl:sticky xl:top-6 xl:self-start">
+          <section
+            id="housing"
+            className={getSectionClassName('housing', 'surface-card rounded-[1.75rem] p-5 scroll-mt-24')}
+          >
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.24em] text-amber-700 dark:text-amber-300">
@@ -1295,7 +1713,7 @@ export default function SetupPage() {
                     ))}
                 </select>
                 <p className="text-sm text-muted-foreground">
-                  Use `Whole month` if housing should stay as one monthly obligation. Use `Split across active cutoffs` if you want amounts like `18,478.35 / 2 = 9,239.175` reflected inside each cutoff.
+                  Use `Whole month` if housing should stay as one monthly obligation. Use `Split across active cutoffs` if you want amounts like `10,000 / 2 = 5,000` reflected inside each cutoff.
                 </p>
               </label>
             </div>
@@ -1314,9 +1732,15 @@ export default function SetupPage() {
             </div>
           </section>
 
-          <section className="surface-card rounded-[1.75rem] p-5">
+          <section
+            id="preview"
+            className={getSectionClassName('preview', 'surface-card rounded-[1.75rem] p-5 scroll-mt-24')}
+          >
             <p className="text-xs font-bold uppercase tracking-[0.24em] text-amber-700 dark:text-amber-300">
               Current preview
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Use this to sanity-check your current live budget before you save changes.
             </p>
             {form.viewMode === 'cutoff' && (
               <div className="mt-4">
@@ -1411,9 +1835,60 @@ export default function SetupPage() {
                 </p>
               </div>
             </div>
+
+            <div className="mt-5 flex flex-wrap gap-3">
+              <button type="button" onClick={saveSetup} className="public-primary-button px-5">
+                {saveState === 'saved' ? 'Saved' : 'Save setup'}
+              </button>
+              <button
+                type="button"
+                onClick={() => jumpToSection('income')}
+                className="public-outline-button px-5"
+              >
+                Back to top
+              </button>
+            </div>
           </section>
         </div>
       </div>
+
+      {isCompactSetup && (
+        <div className="sticky bottom-4 z-30">
+          <div className="surface-card mx-auto flex max-w-3xl items-center justify-between gap-3 rounded-2xl px-4 py-3 shadow-[0_20px_40px_rgba(15,23,42,0.12)]">
+            <button
+              type="button"
+              onClick={() => previousSectionId && jumpToSection(previousSectionId)}
+              disabled={!previousSectionId}
+              className="public-outline-button px-4 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Back
+            </button>
+
+            <div className="text-center">
+              <p className="text-sm font-semibold text-foreground">
+                {setupSections[activeSectionIndex]?.title ?? 'Setup'}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {setupSections[activeSectionIndex]?.status ?? 'Review this section'}
+              </p>
+            </div>
+
+            {nextSectionId ? (
+              <button
+                type="button"
+                onClick={() => jumpToSection(nextSectionId)}
+                className="public-primary-button px-4"
+              >
+                Next
+              </button>
+            ) : (
+              <button type="button" onClick={saveSetup} className="public-primary-button px-4">
+                {saveState === 'saved' ? 'Saved' : 'Save'}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </section>
   )
 }

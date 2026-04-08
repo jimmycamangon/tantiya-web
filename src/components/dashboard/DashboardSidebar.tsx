@@ -24,34 +24,48 @@ export default function DashboardSidebar({
 
   return (
     <>
-      <div className="flex items-center gap-2 border-b border-border p-3">
+      <div className="border-b border-border p-3">
         <button
           type="button"
           onClick={onToggleExpanded}
-          className="flex w-full min-w-0 cursor-pointer items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-accent"
+          className="flex w-full min-w-0 cursor-pointer items-center gap-3 rounded-2xl border border-border/70 bg-card/50 px-3 py-3 text-left transition-colors hover:bg-accent"
           aria-label="Toggle logo details"
         >
           {showFullLogo ? (
             <div className="flex min-w-0 items-center gap-3">
-              <img src="./icon.png" alt="" width={"30px"} />
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.18),rgba(28,25,23,0.95))] shadow-[0_14px_30px_rgba(16,185,129,0.14)]">
+                <img src="./icon.png" alt="" width={"30px"} />
+              </div>
               <div className="min-w-0 text-left">
-                <p className="truncate text-base font-extrabold uppercase tracking-[0.22em] text-foreground">
+                <p className="truncate text-base font-extrabold uppercase tracking-[0.28em] text-foreground">
                   Tantiya
                 </p>
-                <p className="muted-copy truncate text-xs">
+                <p className="mt-0.5 truncate text-[11px] font-medium uppercase tracking-[0.18em] text-emerald-800 dark:text-emerald-300">
+                  Local budget workspace
+                </p>
+                <p className="muted-copy mt-1 truncate text-xs">
                   Budget tracking with cutoff awareness
                 </p>
               </div>
             </div>
           ) : (
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-stone-900 text-sm font-extrabold uppercase tracking-[0.22em] text-stone-50">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.18),rgba(28,25,23,0.95))] text-sm font-extrabold uppercase tracking-[0.22em] text-stone-50 shadow-[0_14px_30px_rgba(16,185,129,0.14)]">
               <img src="./icon.png" alt="" width={"50px"} />
             </div>
           )}
         </button>
       </div>
 
-      <nav className="flex-1 space-y-2 overflow-visible p-3">
+      <nav className="flex-1 overflow-visible p-3">
+        {showFullLogo && (
+          <div className="mb-3 px-2">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+              Workspace
+            </p>
+          </div>
+        )}
+
+        <div className="space-y-2">
         {navItems.map((item) => {
           const Icon = item.icon
           const isActive = activeId === item.id
@@ -85,18 +99,20 @@ export default function DashboardSidebar({
             </div>
           )
         })}
+        </div>
       </nav>
 
       <div className="mt-auto border-t border-border p-3">
-        <div className="flex items-center gap-2 rounded-md bg-muted p-2">
+        <div className="rounded-2xl border border-border/70 bg-card/60 p-2">
+          <div className="flex items-center gap-3">
           {profile.avatarDataUrl ? (
             <img
               src={profile.avatarDataUrl}
               alt={`${profile.fullName} avatar`}
-              className="h-9 w-9 rounded-md object-cover"
+              className="h-10 w-10 rounded-xl object-cover"
             />
           ) : (
-            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-accent text-xs font-semibold text-foreground">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[radial-gradient(circle_at_top,rgba(250,204,21,0.24),rgba(245,245,244,0.9))] text-xs font-semibold text-foreground dark:bg-[radial-gradient(circle_at_top,rgba(250,204,21,0.22),rgba(41,37,36,0.95))]">
               {profileInitials}
             </div>
           )}
@@ -106,6 +122,7 @@ export default function DashboardSidebar({
               <p className="muted-copy truncate text-xs">{profile.title}</p>
             </div>
           )}
+          </div>
         </div>
       </div>
     </>

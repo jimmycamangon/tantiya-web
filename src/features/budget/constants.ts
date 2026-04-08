@@ -13,6 +13,7 @@ export const DEFAULT_QUICK_AMOUNT_PRESETS = [
 export const DEFAULT_SETTINGS: BudgetSettings = {
   currency: 'PHP',
   viewMode: 'cutoff',
+  activeCutoffId: undefined,
   monthlyIncomeTarget: 0,
   savingsBuffer: 0,
   allowancePlan: {
@@ -68,8 +69,10 @@ export const createEmptyBudgetData = (): BudgetData => {
     version: BUDGET_DATA_VERSION,
     createdAt: now,
     updatedAt: now,
+    lifecycle: {},
     settings: DEFAULT_SETTINGS,
     incomes: [],
     expenses: [],
+    fixedExpensePayments: [],
   }
 }

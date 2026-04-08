@@ -2,8 +2,10 @@ import type { LucideIcon } from 'lucide-react'
 import {
   BarChart3,
   CalendarRange,
+  History,
   HandCoins,
   LayoutDashboard,
+  Landmark,
   Settings,
   WalletCards,
 } from 'lucide-react'
@@ -35,6 +37,12 @@ export const routeMeta: Record<string, RouteMeta> = {
     description: 'Tap gastos and deduct instantly',
     breadcrumbs: ['quickDeduct'],
   },
+  income: {
+    path: '/income',
+    title: 'Income',
+    description: 'Log actual salary and allowance received',
+    breadcrumbs: ['income'],
+  },
   cutoffs: {
     path: '/cutoffs',
     title: 'Cutoff Tracking',
@@ -46,6 +54,12 @@ export const routeMeta: Record<string, RouteMeta> = {
     title: 'Analysis',
     description: 'Budget and spending insights',
     breadcrumbs: ['analysis'],
+  },
+  history: {
+    path: '/history',
+    title: 'History',
+    description: 'Review and fix saved deductions',
+    breadcrumbs: ['history'],
   },
   settings: {
     path: '/settings',
@@ -75,6 +89,12 @@ export const navItems: NavItem[] = [
     detail: 'Tap gastos fast',
   },
   {
+    id: 'income',
+    icon: Landmark,
+    title: 'Income',
+    detail: 'Track actual salary',
+  },
+  {
     id: 'cutoffs',
     icon: CalendarRange,
     title: 'Cutoffs',
@@ -85,6 +105,12 @@ export const navItems: NavItem[] = [
     icon: BarChart3,
     title: 'Analysis',
     detail: 'Compare spending trends',
+  },
+  {
+    id: 'history',
+    icon: History,
+    title: 'History',
+    detail: 'Review saved gastos',
   },
   {
     id: 'budgetSetup',

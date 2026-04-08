@@ -1,9 +1,32 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import {
+  getCutoffCycleKey,
+  getCutoffRangeForDate,
+  getMonthCycleKey,
+} from '@/features/budget/calculations'
 import { useBudgetStore } from '@/hooks/useBudgetStore'
 
+const toCurrency = (value: number) => `PHP ${value.toLocaleString()}`
+
+const addDays = (date: Date, days: number) => {
+  const next = new Date(date)
+  next.setDate(next.getDate() + days)
+  return next
+}
+
+const formatShortDate = (date: Date) =>
+  date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+
 export default function DashboardPage() {
-  const { budgetData, snapshot } = useBudgetStore()
+  const {
+    budgetData,
+    snapshot,
+    cycleNotice,
+    dismissCycleNotice,
+    markFixedExpensePaid,
+    unmarkFixedExpensePaid,
+  } = useBudgetStore()
   const isCutoffMode = budgetData.settings.viewMode === 'cutoff'
   const [cutoffView, setCutoffView] = useState<'current' | string>('current')
   const configuredCutoffIncomeTotal = budgetData.settings.cutoffs
@@ -59,15 +82,282 @@ export default function DashboardPage() {
         : 'Not set'
     : 'Monthly cycle'
 
+  const billStatusItems = useMemo(() => {
+    const today = new Date()
+    const reminderCutoff =
+      isCutoffMode && focusedCutoffSummary
+        ? budgetData.settings.cutoffs.find((cutoff) => cutoff.id === focusedCutoffSummary.cutoffId)
+        : snapshot.currentCutoff
+
+    return budgetData.settings.fixedExpenses
+      .filter((expense) => expense.isActive)
+      .filter((expense) => {
+        if (!isCutoffMode) {
+          return expense.budgetApplication === 'whole-month'
+        }
+
+        if (!reminderCutoff) {
+          return false
+        }
+
+        if (expense.budgetApplication === 'whole-month') {
+          return false
+        }
+
+        if (expense.budgetApplication === 'specific-cutoff') {
+          return expense.cutoffId === reminderCutoff.id
+        }
+
+        return expense.budgetApplication === 'every-cutoff'
+      })
+      .map((expense) => {
+        const cycleKey =
+          isCutoffMode && reminderCutoff
+            ? getCutoffCycleKey(reminderCutoff, today)
+            : getMonthCycleKey(today)
+        const paymentRecord = budgetData.fixedExpensePayments.find(
+          (record) => record.fixedExpenseId === expense.id && record.cycleKey === cycleKey,
+        )
+        const dueDay =
+          isCutoffMode && reminderCutoff && expense.budgetApplication === 'every-cutoff'
+            ? expense.cutoffDueDays?.[reminderCutoff.id]
+            : expense.dueDay
+
+        return {
+          expense,
+          cycleKey,
+          cutoffId: isCutoffMode ? reminderCutoff?.id : undefined,
+          isPaid: Boolean(paymentRecord),
+          paidAt: paymentRecord?.markedPaidAt,
+          dueDay,
+        }
+      })
+  }, [budgetData.fixedExpensePayments, budgetData.settings.cutoffs, budgetData.settings.fixedExpenses, focusedCutoffSummary, isCutoffMode, snapshot.currentCutoff])
+
+  const reminders = useMemo(() => {
+    const items: Array<{
+      id: string
+      tone: 'info' | 'warning'
+      title: string
+      body: string
+      meta?: string
+    }> = []
+    const today = new Date()
+    const reminderCutoff =
+      isCutoffMode && focusedCutoffSummary
+        ? budgetData.settings.cutoffs.find((cutoff) => cutoff.id === focusedCutoffSummary.cutoffId)
+        : snapshot.currentCutoff
+
+    if (isCutoffMode && reminderCutoff) {
+      const currentCutoffRange = getCutoffRangeForDate(today, reminderCutoff)
+      const periodEndDate = currentCutoffRange.end
+      const payoutDate = addDays(periodEndDate, reminderCutoff.expectedPayoutOffsetDays ?? 0)
+      const daysUntilPayout = Math.ceil(
+        (new Date(payoutDate.getFullYear(), payoutDate.getMonth(), payoutDate.getDate()).getTime() -
+          new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime()) /
+          86400000,
+      )
+      const hasActualIncomeForCutoff = budgetData.incomes.some(
+        (income) => income.cutoffId === reminderCutoff.id,
+      )
+
+      items.push({
+        id: `payout-${reminderCutoff.id}`,
+        tone: daysUntilPayout <= 3 ? 'warning' : 'info',
+        title: `${reminderCutoff.label} payout reminder`,
+        body: `Expected income is ${toCurrency(
+          reminderCutoff.expectedIncomeAmount ?? 0,
+        )} with payout target on ${formatShortDate(payoutDate)}.`,
+        meta:
+          daysUntilPayout < 0
+            ? `${Math.abs(daysUntilPayout)} day(s) past expected payout`
+            : daysUntilPayout === 0
+              ? 'Expected today'
+              : `${daysUntilPayout} day(s) until payout`,
+      })
+
+      if (!hasActualIncomeForCutoff) {
+        items.push({
+          id: `income-missing-${reminderCutoff.id}`,
+          tone: 'warning',
+          title: `No actual income logged for ${reminderCutoff.label}`,
+          body: 'Add the salary you really received in the Income page so the budget uses actual payroll instead of only setup values.',
+          meta: 'Recommended after payout arrives',
+        })
+      }
+
+      const recurringCount = budgetData.settings.fixedExpenses.filter(
+        (expense) =>
+          expense.isActive &&
+          (expense.budgetApplication === 'every-cutoff' ||
+            (expense.budgetApplication === 'specific-cutoff' &&
+              expense.cutoffId === reminderCutoff.id)),
+      ).length
+      const dueSoonBill = budgetData.settings.fixedExpenses.find((expense) => {
+        if (!expense.isActive) {
+          return false
+        }
+
+        if (expense.budgetApplication === 'specific-cutoff' && expense.cutoffId !== reminderCutoff.id) {
+          return false
+        }
+
+        const relevantDueDay =
+          expense.budgetApplication === 'every-cutoff'
+            ? expense.cutoffDueDays?.[reminderCutoff.id]
+            : expense.dueDay
+
+        if (!relevantDueDay) {
+          return false
+        }
+
+        const cycleKey = getCutoffCycleKey(reminderCutoff, today)
+
+        const isPaid = budgetData.fixedExpensePayments.some(
+          (record) => record.fixedExpenseId === expense.id && record.cycleKey === cycleKey,
+        )
+
+        if (isPaid) {
+          return false
+        }
+
+        if (expense.budgetApplication === 'whole-month') {
+          return Math.abs(relevantDueDay - today.getDate()) <= 3
+        }
+
+        return Math.abs(relevantDueDay - today.getDate()) <= 3
+      })
+      const payrollDeductionCount = budgetData.settings.payrollDeductions.filter(
+        (deduction) =>
+          deduction.enabled && (!deduction.cutoffId || deduction.cutoffId === reminderCutoff.id),
+      ).length
+      const hasHousingOnFocusedCutoff =
+        budgetData.settings.housingPlan.enabled &&
+        (budgetData.settings.housingPlan.budgetApplication === 'split-across-cutoffs' ||
+          (budgetData.settings.housingPlan.budgetApplication === 'specific-cutoff' &&
+            budgetData.settings.housingPlan.cutoffId === reminderCutoff.id))
+
+      if (recurringCount > 0 || payrollDeductionCount > 0 || hasHousingOnFocusedCutoff) {
+        items.push({
+          id: `obligations-${reminderCutoff.id}`,
+          tone: 'info',
+          title: `${reminderCutoff.label} recurring obligations`,
+          body: `${recurringCount} fixed bill(s), ${payrollDeductionCount} payroll deduction(s), and ${
+            hasHousingOnFocusedCutoff ? 'housing is included' : 'no housing allocation'
+          } in this cutoff budget.`,
+          meta: 'Review setup if one item should move to another cutoff',
+        })
+      }
+
+      if (dueSoonBill) {
+        const dueSoonBillDay =
+          dueSoonBill.budgetApplication === 'every-cutoff'
+            ? dueSoonBill.cutoffDueDays?.[reminderCutoff.id]
+            : dueSoonBill.dueDay
+        items.push({
+          id: `bill-due-${dueSoonBill.id}`,
+          tone: 'warning',
+          title: `${dueSoonBill.name || 'Recurring bill'} is due soon`,
+          body: `${toCurrency(dueSoonBill.amount)} is scheduled around day ${dueSoonBillDay} based on your recurring bill setup.`,
+          meta: 'Review or pay soon',
+        })
+      }
+    } else if (!isCutoffMode) {
+      const hasActualIncome = budgetData.incomes.length > 0
+
+      if (!hasActualIncome) {
+        items.push({
+          id: 'monthly-income-missing',
+          tone: 'warning',
+          title: 'No actual income logged this month',
+          body: 'Your budget is currently relying on the monthly target from setup. Add a real income entry when salary arrives.',
+          meta: 'Income page',
+        })
+      }
+
+      if (budgetData.settings.fixedExpenses.some((expense) => expense.isActive)) {
+        items.push({
+          id: 'monthly-bills',
+          tone: 'info',
+          title: 'Recurring bills are active this month',
+          body: `${budgetData.settings.fixedExpenses.filter((expense) => expense.isActive).length} fixed expense item(s) are already reducing your monthly budget.`,
+          meta: 'Check Budget Setup for changes',
+        })
+      }
+
+      const dueSoonMonthlyBill = budgetData.settings.fixedExpenses.find(
+        (expense) => {
+          if (!expense.isActive || !expense.dueDay) {
+            return false
+          }
+
+          const cycleKey = getMonthCycleKey(today)
+          const isPaid = budgetData.fixedExpensePayments.some(
+            (record) => record.fixedExpenseId === expense.id && record.cycleKey === cycleKey,
+          )
+
+          if (isPaid) {
+            return false
+          }
+
+          return Math.abs(expense.dueDay - today.getDate()) <= 3
+        },
+      )
+
+      if (dueSoonMonthlyBill) {
+        items.push({
+          id: `monthly-bill-due-${dueSoonMonthlyBill.id}`,
+          tone: 'warning',
+          title: `${dueSoonMonthlyBill.name || 'Recurring bill'} is due soon`,
+          body: `${toCurrency(dueSoonMonthlyBill.amount)} is scheduled around day ${dueSoonMonthlyBill.dueDay} in your monthly plan.`,
+          meta: 'Review or pay soon',
+        })
+      }
+    }
+
+    if (budgetData.settings.allowancePlan.enabled && budgetData.incomes.length === 0) {
+      items.push({
+        id: 'allowance-setup',
+        tone: 'info',
+        title: 'Allowance is configured in setup',
+        body: 'If your company gives allowance separately, you can also log it as an actual income entry once it is received.',
+        meta: 'Optional but helpful for accuracy',
+      })
+    }
+
+    return items.slice(0, 4)
+  }, [budgetData.fixedExpensePayments, budgetData.incomes, budgetData.settings, focusedCutoffSummary, isCutoffMode, snapshot.currentCutoff])
+
+  const warningReminders = reminders.filter((reminder) => reminder.tone === 'warning').length
+  const unpaidBillCount = billStatusItems.filter((item) => !item.isPaid).length
+  const focusCards = useMemo(
+    () => [
+      {
+        title: isCutoffMode ? 'Live cutoff' : 'Live month',
+        value: currentCutoffLabel,
+        tone: 'emerald',
+      },
+      {
+        title: 'Urgent reminders',
+        value: `${warningReminders}`,
+        tone: warningReminders > 0 ? 'amber' : 'stone',
+      },
+      {
+        title: 'Unpaid bills',
+        value: `${unpaidBillCount}`,
+        tone: unpaidBillCount > 0 ? 'amber' : 'stone',
+      },
+      {
+        title: 'Logged gastos',
+        value: toCurrency(scopedTotals.totalVariableExpenses),
+        tone: 'stone',
+      },
+    ],
+    [currentCutoffLabel, isCutoffMode, scopedTotals.totalVariableExpenses, unpaidBillCount, warningReminders],
+  )
+
   const summaryCards = useMemo(
     () => [
-      [
-        'Remaining budget',
-        `PHP ${scopedTotals.remainingBudget.toLocaleString()}`,
-        isCutoffMode
-          ? 'Focused cutoff remaining after its assigned expenses and recurring cutoff bills.'
-          : 'After fixed expenses, housing cost, reserved savings, and logged gastos.',
-      ],
       [
         isCutoffMode ? 'Current cutoff' : 'Budget cycle',
         currentCutoffLabel,
@@ -151,7 +441,85 @@ export default function DashboardPage() {
             Open quick deduct
           </Link>
         </div>
+
+        {cycleNotice && (
+          <div className="mt-6 rounded-2xl border border-emerald-300/70 bg-emerald-50/80 px-4 py-4 dark:border-emerald-800/70 dark:bg-emerald-950/20">
+            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+              <div>
+                <p className="font-semibold text-foreground">New budget cycle detected</p>
+                <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                  Tantiya moved from {cycleNotice.previousLabel} to {cycleNotice.nextLabel} and is now using{' '}
+                  {cycleNotice.nextRangeLabel} as the active live cycle.
+                </p>
+              </div>
+              <button type="button" onClick={dismissCycleNotice} className="ui-button-subtle">
+                Dismiss
+              </button>
+            </div>
+          </div>
+        )}
       </div>
+
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)]">
+        <article className="surface-card rounded-[1.75rem] bg-[linear-gradient(135deg,rgba(5,150,105,0.16),rgba(255,255,255,0.08))] p-6 shadow-[0_24px_60px_rgba(5,150,105,0.12)] dark:bg-[linear-gradient(135deg,rgba(16,185,129,0.16),rgba(255,255,255,0.03))] sm:p-7">
+          <p className="text-xs font-bold uppercase tracking-[0.24em] text-emerald-800 dark:text-emerald-300">
+            Live budget
+          </p>
+          <div className="mt-4 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+            <div>
+              <p className="text-4xl font-bold tracking-[-0.06em] text-foreground sm:text-5xl">
+                {toCurrency(scopedTotals.remainingBudget)}
+              </p>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
+                {isCutoffMode
+                  ? 'This is the remaining budget for the active focused cutoff after its assigned bills, payroll deductions, housing allocation, and logged gastos.'
+                  : 'This is your remaining whole-month budget after recurring obligations, housing, reserved savings, and logged gastos.'}
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2 xl:w-[23rem] xl:flex-none">
+              <div className="rounded-2xl border border-white/40 bg-white/45 px-4 py-4 backdrop-blur dark:border-white/10 dark:bg-white/5">
+                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Income in view</p>
+                <p className="mt-2 text-xl font-semibold text-foreground">
+                  {toCurrency(scopedTotals.totalIncome)}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-white/40 bg-white/45 px-4 py-4 backdrop-blur dark:border-white/10 dark:bg-white/5">
+                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Committed costs</p>
+                <p className="mt-2 text-xl font-semibold text-foreground">
+                  {toCurrency(
+                    scopedTotals.totalFixedExpenses +
+                      scopedTotals.totalHousingCost +
+                      scopedTotals.totalVariableExpenses,
+                  )}
+                </p>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+          {focusCards.map((card) => (
+            <article key={card.title} className="surface-card rounded-[1.5rem] p-5">
+              <p className="text-xs font-bold uppercase tracking-[0.22em] text-muted-foreground">
+                {card.title}
+              </p>
+              <p
+                className={[
+                  'mt-3 text-2xl font-bold tracking-[-0.05em]',
+                  card.tone === 'emerald'
+                    ? 'text-emerald-800 dark:text-emerald-300'
+                    : card.tone === 'amber'
+                      ? 'text-amber-700 dark:text-amber-300'
+                      : 'text-foreground',
+                ].join(' ')}
+              >
+                {card.value}
+              </p>
+            </article>
+          ))}
+        </section>
+      </section>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {summaryCards.map(([title, value, body]) => (
@@ -195,6 +563,118 @@ export default function DashboardPage() {
           </div>
         </section>
       )}
+
+      <section className="surface-card rounded-[1.75rem] p-5">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.24em] text-amber-700 dark:text-amber-300">
+              Due soon
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Heads-up reminders based on your current budget cycle, payout expectations, and recurring obligations.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link to="/income" className="public-outline-button px-4">
+              Open income
+            </Link>
+            <Link to="/setup" className="public-outline-button px-4">
+              Review setup
+            </Link>
+          </div>
+        </div>
+
+        <div className="mt-4 space-y-3">
+          {reminders.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-border px-4 py-5 text-sm text-muted-foreground">
+              No reminder signals right now. As you add more actual income and recurring setup data, Tantiya will surface more useful heads-ups here.
+            </div>
+          ) : (
+            reminders.map((reminder) => (
+              <article
+                key={reminder.id}
+                className={[
+                  'rounded-2xl border px-4 py-4',
+                  reminder.tone === 'warning'
+                    ? 'border-amber-300/80 bg-amber-50/80 dark:border-amber-800/80 dark:bg-amber-950/20'
+                    : 'border-border bg-muted/50',
+                ].join(' ')}
+              >
+                <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <p className="font-semibold text-foreground">{reminder.title}</p>
+                    <p className="mt-1 text-sm leading-6 text-muted-foreground">{reminder.body}</p>
+                  </div>
+                  {reminder.meta && (
+                    <span className="rounded-full bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
+                      {reminder.meta}
+                    </span>
+                  )}
+                </div>
+              </article>
+            ))
+          )}
+        </div>
+      </section>
+
+      <section className="surface-card rounded-[1.75rem] p-5">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.24em] text-amber-700 dark:text-amber-300">
+              Bill status
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Mark recurring bills as paid for the current month or the focused cutoff so reminders stay accurate.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-4 space-y-3">
+          {billStatusItems.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-border px-4 py-5 text-sm text-muted-foreground">
+              No recurring bills apply to the current period yet.
+            </div>
+          ) : (
+            billStatusItems.map((item) => (
+              <article key={`${item.expense.id}-${item.cycleKey}`} className="rounded-2xl bg-muted/50 px-4 py-4">
+                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <p className="font-semibold text-foreground">{item.expense.name || 'Unnamed bill'}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {toCurrency(item.expense.amount)} · {item.expense.category}
+                      {item.dueDay ? ` · due around day ${item.dueDay}` : ''}
+                    </p>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {item.isPaid
+                        ? `Marked paid ${new Date(item.paidAt ?? '').toLocaleString()}`
+                        : 'Not marked paid yet for this cycle'}
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      item.isPaid
+                        ? unmarkFixedExpensePaid({
+                            fixedExpenseId: item.expense.id,
+                            cycleKey: item.cycleKey,
+                          })
+                        : markFixedExpensePaid({
+                            fixedExpenseId: item.expense.id,
+                            cycleKey: item.cycleKey,
+                            cutoffId: item.cutoffId,
+                          })
+                    }
+                    className={item.isPaid ? 'ui-button-subtle' : 'ui-button'}
+                  >
+                    {item.isPaid ? 'Mark as unpaid' : 'Mark as paid'}
+                  </button>
+                </div>
+              </article>
+            ))
+          )}
+        </div>
+      </section>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
         <section className="surface-card rounded-[1.75rem] p-5">

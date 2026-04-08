@@ -4,6 +4,8 @@ import RootLayout from '@/layouts/RootLayout'
 import AnalysisPage from '@/pages/AnalysisPage'
 import CutoffsPage from '@/pages/CutoffsPage'
 import DashboardPage from '@/pages/DashboardPage'
+import HistoryPage from '@/pages/HistoryPage'
+import IncomePage from '@/pages/IncomePage'
 import LandingPage from '@/pages/LandingPage'
 import NotFoundPage from '@/pages/NotFoundPage'
 import QuickDeductPage from '@/pages/QuickDeductPage'
@@ -38,12 +40,20 @@ export const router = createBrowserRouter([
         element: <QuickDeductPage />,
       },
       {
+        path: '/income',
+        element: <IncomePage />,
+      },
+      {
         path: '/cutoffs',
         element: <CutoffsPage />,
       },
       {
         path: '/analysis',
         element: <AnalysisPage />,
+      },
+      {
+        path: '/history',
+        element: <HistoryPage />,
       },
       {
         path: '/setup',

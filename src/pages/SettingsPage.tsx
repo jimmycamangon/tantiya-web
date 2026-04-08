@@ -2,6 +2,13 @@ import { useMemo, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import { exportBudgetData } from '@/features/budget/storage'
 import { useBudgetStore } from '@/hooks/useBudgetStore'
+import {
+  getDefaultUserProfile,
+  getProfileInitials,
+  readUserProfile,
+  saveUserProfile,
+} from '@/lib/userPreference'
+import type { UserProfile } from '@/types/userProfile'
 
 const downloadTextFile = (filename: string, content: string) => {
   const blob = new Blob([content], { type: 'application/json;charset=utf-8' })
@@ -18,6 +25,8 @@ export default function SettingsPage() {
   const [importState, setImportState] = useState<'idle' | 'importing' | 'success' | 'error'>('idle')
   const [importMessage, setImportMessage] = useState('')
   const [exportState, setExportState] = useState<'idle' | 'done'>('idle')
+  const [profileForm, setProfileForm] = useState<UserProfile>(() => readUserProfile())
+  const [profileState, setProfileState] = useState<'idle' | 'saved'>('idle')
 
   const backupFilename = useMemo(() => {
     const stamp = new Date().toISOString().slice(0, 10)
@@ -34,6 +43,8 @@ export default function SettingsPage() {
     }),
     [budgetData],
   )
+
+  const profileInitials = useMemo(() => getProfileInitials(profileForm), [profileForm])
 
   const handleExport = () => {
     const raw = exportBudgetData(budgetData)
@@ -62,6 +73,45 @@ export default function SettingsPage() {
     }
   }
 
+  const handleProfileSave = () => {
+    saveUserProfile({
+      ...profileForm,
+      fullName: profileForm.fullName.trim() || getDefaultUserProfile().fullName,
+      title: profileForm.title.trim() || getDefaultUserProfile().title,
+      focusArea: profileForm.focusArea.trim(),
+      bio: profileForm.bio.trim(),
+    })
+    setProfileState('saved')
+    window.setTimeout(() => setProfileState('idle'), 1800)
+  }
+
+  const handleAvatarUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = typeof reader.result === 'string' ? reader.result : ''
+      setProfileForm((current) => ({
+        ...current,
+        avatarDataUrl: result,
+      }))
+    }
+    reader.readAsDataURL(file)
+    event.target.value = ''
+  }
+
+  const removeAvatar = () => {
+    setProfileForm((current) => ({
+      ...current,
+      avatarDataUrl: '',
+    }))
+  }
+
+  const resetProfile = () => {
+    setProfileForm(getDefaultUserProfile())
+  }
+
   return (
     <section className="space-y-6">
       <section className="surface-card rounded-[2rem] bg-[linear-gradient(180deg,rgba(255,255,255,0.14),rgba(255,255,255,0.06))] p-6 dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.015))] sm:p-8">
@@ -79,6 +129,143 @@ export default function SettingsPage() {
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.95fr)]">
         <div className="space-y-4">
+          <section className="surface-card rounded-[1.75rem] p-5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.24em] text-amber-700 dark:text-amber-300">
+                  Profile
+                </p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Update the name, role, and photo shown in your Tantiya dashboard.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleProfileSave}
+                className="public-primary-button px-5"
+              >
+                {profileState === 'saved' ? 'Profile saved' : 'Save profile'}
+              </button>
+            </div>
+
+            <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(280px,0.55fr)]">
+              <div className="space-y-4">
+                <label className="space-y-2">
+                  <span className="text-sm font-medium text-foreground">Full name</span>
+                  <input
+                    type="text"
+                    value={profileForm.fullName}
+                    onChange={(event) =>
+                      setProfileForm((current) => ({
+                        ...current,
+                        fullName: event.target.value,
+                      }))
+                    }
+                    className="ui-input"
+                    placeholder="Your full name"
+                  />
+                </label>
+
+                <label className="space-y-2">
+                  <span className="text-sm font-medium text-foreground">Role or title</span>
+                  <input
+                    type="text"
+                    value={profileForm.title}
+                    onChange={(event) =>
+                      setProfileForm((current) => ({
+                        ...current,
+                        title: event.target.value,
+                      }))
+                    }
+                    className="ui-input"
+                    placeholder="Budget Planner"
+                  />
+                </label>
+
+                <label className="space-y-2">
+                  <span className="text-sm font-medium text-foreground">Focus line</span>
+                  <input
+                    type="text"
+                    value={profileForm.focusArea}
+                    onChange={(event) =>
+                      setProfileForm((current) => ({
+                        ...current,
+                        focusArea: event.target.value,
+                      }))
+                    }
+                    className="ui-input"
+                    placeholder="One-line budget focus"
+                  />
+                </label>
+
+                <label className="space-y-2">
+                  <span className="text-sm font-medium text-foreground">Short bio</span>
+                  <textarea
+                    value={profileForm.bio}
+                    onChange={(event) =>
+                      setProfileForm((current) => ({
+                        ...current,
+                        bio: event.target.value,
+                      }))
+                    }
+                    className="ui-input min-h-28 resize-y"
+                    placeholder="A short description shown for your Tantiya profile."
+                  />
+                </label>
+              </div>
+
+              <div className="rounded-2xl border border-border bg-card/60 p-4">
+                <p className="text-sm font-medium text-foreground">Profile preview</p>
+                <div className="mt-4 flex items-center gap-4">
+                  <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl bg-muted text-xl font-bold text-foreground">
+                    {profileForm.avatarDataUrl ? (
+                      <img
+                        src={profileForm.avatarDataUrl}
+                        alt={`${profileForm.fullName} avatar`}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      profileInitials
+                    )}
+                  </div>
+
+                  <div className="min-w-0">
+                    <p className="truncate text-lg font-semibold text-foreground">
+                      {profileForm.fullName || 'Tantiya User'}
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {profileForm.title || 'Budget Planner'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4 space-y-3">
+                  <label className="flex cursor-pointer flex-col items-start gap-3 rounded-2xl border border-border bg-background/60 px-4 py-4 transition-colors hover:bg-accent">
+                    <span className="public-outline-button px-5">Upload profile image</span>
+                    <span className="text-sm text-muted-foreground">
+                      JPG and PNG work well. The image is stored only in this browser.
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      onChange={handleAvatarUpload}
+                      className="sr-only"
+                    />
+                  </label>
+
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" onClick={removeAvatar} className="ui-button-subtle">
+                      Remove image
+                    </button>
+                    <button type="button" onClick={resetProfile} className="ui-button-subtle">
+                      Reset profile fields
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
           <section className="surface-card rounded-[1.75rem] p-5">
             <div className="flex items-center justify-between gap-3">
               <div>

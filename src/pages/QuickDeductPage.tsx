@@ -25,6 +25,7 @@ export default function QuickDeductPage() {
   const [note, setNote] = useState('')
 
   const currentCutoff = snapshot.currentCutoff
+  const currentCutoffLabel = currentCutoff ? currentCutoff.label : isCutoffMode ? 'Not set' : 'Monthly cycle'
   const recentExpenses = useMemo(
     () => budgetData.expenses.slice().sort((left, right) => right.createdAt.localeCompare(left.createdAt)).slice(0, 8),
     [budgetData.expenses],
@@ -49,6 +50,8 @@ export default function QuickDeductPage() {
     [recentExpenses],
   )
 
+  const projectedRemaining = scopedTotals.remainingBudget - (selectedAmount ?? 0)
+
   return (
     <section className="space-y-6">
       <div className="surface-card rounded-[2rem] bg-[linear-gradient(180deg,rgba(255,255,255,0.14),rgba(255,255,255,0.06))] p-6 dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.015))] sm:p-8">
@@ -66,6 +69,38 @@ export default function QuickDeductPage() {
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(340px,0.95fr)]">
         <div className="space-y-4">
+          <section className="surface-card rounded-[1.75rem] border border-emerald-300/60 bg-[linear-gradient(135deg,rgba(5,150,105,0.14),rgba(255,255,255,0.08))] p-5 shadow-[0_20px_50px_rgba(5,150,105,0.12)] dark:border-emerald-800/60 dark:bg-[linear-gradient(135deg,rgba(16,185,129,0.12),rgba(255,255,255,0.02))]">
+            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.24em] text-emerald-800 dark:text-emerald-300">
+                  Ready to deduct
+                </p>
+                <p className="mt-3 text-4xl font-bold tracking-[-0.06em] text-foreground">
+                  {selectedAmount ? toCurrency(selectedAmount) : 'PHP 0'}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  {categoryOptions.find((category) => category.id === selectedCategory)?.label} will be charged to{' '}
+                  {currentCutoffLabel}.
+                </p>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-white/40 bg-white/45 px-4 py-4 backdrop-blur dark:border-white/10 dark:bg-white/5">
+                  <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Current budget</p>
+                  <p className="mt-2 text-xl font-semibold text-foreground">
+                    {toCurrency(scopedTotals.remainingBudget)}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-white/40 bg-white/45 px-4 py-4 backdrop-blur dark:border-white/10 dark:bg-white/5">
+                  <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">After tap</p>
+                  <p className="mt-2 text-xl font-semibold text-foreground">
+                    {toCurrency(projectedRemaining)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
           <section className="surface-card rounded-[1.75rem] p-5">
             <p className="text-xs font-bold uppercase tracking-[0.24em] text-amber-700 dark:text-amber-300">
               Live budget
@@ -81,10 +116,10 @@ export default function QuickDeductPage() {
               </div>
               <div className="rounded-2xl bg-muted/50 px-4 py-4">
                 <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                  {isCutoffMode ? 'Current cutoff' : 'Budget cycle'}
+                  {isCutoffMode ? 'Charged to cutoff' : 'Budget cycle'}
                 </p>
                 <p className="mt-2 text-lg font-semibold text-foreground">
-                  {currentCutoff ? currentCutoff.label : isCutoffMode ? 'Not set' : 'Monthly cycle'}
+                  {currentCutoffLabel}
                 </p>
               </div>
               <div className="rounded-2xl bg-muted/50 px-4 py-4">
@@ -102,7 +137,7 @@ export default function QuickDeductPage() {
             <p className="text-xs font-bold uppercase tracking-[0.24em] text-amber-700 dark:text-amber-300">
               Amount presets
             </p>
-            <div className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            <div className="mt-4 grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
               {budgetData.settings.quickAmountPresets.map((preset) => {
                 const isSelected = selectedAmount === preset.value
 
@@ -112,7 +147,7 @@ export default function QuickDeductPage() {
                     type="button"
                     onClick={() => setSelectedAmount(preset.value)}
                     className={[
-                      'rounded-2xl border px-4 py-4 text-left transition-all duration-200',
+                      'min-h-[7.5rem] rounded-2xl border px-4 py-4 text-left transition-all duration-200',
                       isSelected
                         ? 'border-emerald-800 bg-emerald-700 text-emerald-50 shadow-[0_14px_30px_rgba(6,78,59,0.2)] dark:border-emerald-600 dark:bg-emerald-800 dark:text-emerald-50'
                         : 'border-border bg-card hover:bg-accent',
@@ -151,7 +186,7 @@ export default function QuickDeductPage() {
                         type="button"
                         onClick={() => setSelectedCategory(category.id)}
                         className={[
-                          'rounded-full border px-4 py-2 text-sm font-medium transition-colors',
+                          'rounded-full border px-4 py-3 text-sm font-medium transition-colors',
                           isSelected
                             ? 'border-emerald-800 bg-emerald-700 text-emerald-50 shadow-[0_10px_20px_rgba(6,78,59,0.12)] dark:border-emerald-600 dark:bg-emerald-800 dark:text-emerald-50'
                             : 'border-border bg-card text-foreground hover:bg-accent',
@@ -179,7 +214,7 @@ export default function QuickDeductPage() {
                   type="button"
                   onClick={quickDeduct}
                   disabled={!selectedAmount}
-                  className="public-primary-button mt-3 w-full disabled:cursor-not-allowed disabled:opacity-60"
+                  className="public-primary-button mt-3 hidden w-full disabled:cursor-not-allowed disabled:opacity-60 md:inline-flex"
                 >
                   Deduct {selectedAmount ? toCurrency(selectedAmount) : ''}
                 </button>
@@ -204,8 +239,26 @@ export default function QuickDeductPage() {
               </p>
               <p className="mt-4 text-sm text-muted-foreground">Budget after tap</p>
               <p className="mt-2 text-2xl font-bold tracking-[-0.04em] text-foreground">
-                {toCurrency(scopedTotals.remainingBudget - (selectedAmount ?? 0))}
+                {toCurrency(projectedRemaining)}
               </p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl bg-muted/50 px-4 py-3">
+                  <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                    Purchased on
+                  </p>
+                  <p className="mt-2 font-semibold text-foreground">
+                    {new Date().toLocaleDateString()}
+                  </p>
+                </div>
+                <div className="rounded-xl bg-muted/50 px-4 py-3">
+                  <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                    Charged to
+                  </p>
+                  <p className="mt-2 font-semibold text-foreground">
+                    {currentCutoffLabel}
+                  </p>
+                </div>
+              </div>
             </div>
           </section>
 
@@ -231,10 +284,7 @@ export default function QuickDeductPage() {
                 </div>
               ) : (
                 recentExpenses.map((expense) => (
-                  <div
-                    key={expense.id}
-                    className="rounded-2xl bg-muted/50 px-4 py-4"
-                  >
+                  <div key={expense.id} className="rounded-2xl bg-muted/50 px-4 py-4">
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <p className="font-semibold capitalize text-foreground">
@@ -243,13 +293,19 @@ export default function QuickDeductPage() {
                         <p className="mt-1 text-sm text-muted-foreground">
                           {expense.note || 'No note'}
                         </p>
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          Charged to:{' '}
+                          {expense.cutoffId
+                            ? budgetData.settings.cutoffs.find((cutoff) => cutoff.id === expense.cutoffId)?.label ?? 'Assigned cutoff'
+                            : 'No cutoff tag'}
+                        </p>
                       </div>
                       <div className="text-right">
                         <p className="font-semibold text-foreground">
                           {toCurrency(expense.amount)}
                         </p>
                         <p className="mt-1 text-xs text-muted-foreground">
-                          {new Date(expense.createdAt).toLocaleString()}
+                          Purchased on {new Date(expense.createdAt).toLocaleString()}
                         </p>
                       </div>
                     </div>
@@ -267,6 +323,30 @@ export default function QuickDeductPage() {
               )}
             </div>
           </section>
+        </div>
+      </div>
+
+      <div className="sticky bottom-4 z-30 md:hidden">
+        <div className="surface-card mx-auto flex items-center justify-between gap-3 rounded-2xl border border-emerald-300/60 bg-[linear-gradient(135deg,rgba(5,150,105,0.16),rgba(255,255,255,0.08))] px-4 py-3 shadow-[0_20px_40px_rgba(15,23,42,0.14)] dark:border-emerald-800/60 dark:bg-[linear-gradient(135deg,rgba(16,185,129,0.14),rgba(255,255,255,0.02))]">
+          <div className="min-w-0">
+            <p className="text-xs uppercase tracking-[0.18em] text-emerald-800 dark:text-emerald-300">
+              Selected tap
+            </p>
+            <p className="mt-1 truncate text-lg font-semibold text-foreground">
+              {selectedAmount ? toCurrency(selectedAmount) : 'Pick an amount'}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {categoryOptions.find((category) => category.id === selectedCategory)?.label} • {currentCutoffLabel}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={quickDeduct}
+            disabled={!selectedAmount}
+            className="public-primary-button px-4 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Deduct
+          </button>
         </div>
       </div>
     </section>

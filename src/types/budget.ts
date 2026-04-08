@@ -7,6 +7,10 @@ export type HousingBudgetApplication =
   | 'whole-month'
   | 'split-across-cutoffs'
   | 'specific-cutoff'
+export type FixedExpenseApplication =
+  | 'whole-month'
+  | 'every-cutoff'
+  | 'specific-cutoff'
 export type AllowanceFrequency = 'monthly' | 'per-cutoff'
 export type PayrollDeductionType = 'sss' | 'pagibig' | 'philhealth' | 'wtax'
 
@@ -39,7 +43,10 @@ export interface FixedExpense {
   name: string
   amount: number
   category: ExpenseCategory | 'loan' | 'utilities'
+  budgetApplication: FixedExpenseApplication
   cutoffId?: string
+  dueDay?: number
+  cutoffDueDays?: Record<string, number>
   isActive: boolean
 }
 
@@ -91,9 +98,24 @@ export interface ExpenseEntry {
   source: 'quick-tap' | 'manual'
 }
 
+export interface FixedExpensePaymentRecord {
+  id: string
+  fixedExpenseId: string
+  cycleKey: string
+  cutoffId?: string
+  markedPaidAt: string
+}
+
+export interface BudgetLifecycle {
+  lastSeenCycleKey?: string
+  lastSeenCycleLabel?: string
+  lastRolloverAt?: string
+}
+
 export interface BudgetSettings {
   currency: CurrencyCode
   viewMode: BudgetViewMode
+  activeCutoffId?: string
   monthlyIncomeTarget: number
   savingsBuffer: number
   allowancePlan: AllowancePlan
@@ -108,9 +130,11 @@ export interface BudgetData {
   version: number
   createdAt: string
   updatedAt: string
+  lifecycle: BudgetLifecycle
   settings: BudgetSettings
   incomes: IncomeEntry[]
   expenses: ExpenseEntry[]
+  fixedExpensePayments: FixedExpensePaymentRecord[]
 }
 
 export interface BudgetTotals {
@@ -132,4 +156,11 @@ export interface CutoffSummary {
   totalHousingCost: number
   totalExpenses: number
   remainingBudget: number
+}
+
+export interface BudgetCycleSnapshot {
+  key: string
+  label: string
+  rangeLabel: string
+  type: BudgetViewMode
 }

@@ -1,5 +1,6 @@
 import type {
   BudgetData,
+  BudgetCycleSnapshot,
   BudgetTotals,
   CutoffDefinition,
   CutoffSummary,
@@ -10,6 +11,10 @@ import type {
 } from '@/types/budget'
 
 const clampDay = (day: number) => Math.min(Math.max(Math.trunc(day), 1), 31)
+const getLastDayOfMonth = (year: number, month: number) =>
+  new Date(year, month + 1, 0).getDate()
+const clampDayToMonth = (year: number, month: number, day: number) =>
+  Math.min(clampDay(day), getLastDayOfMonth(year, month))
 
 export const sumAmounts = (
   items: Array<{ amount: number; isActive?: boolean }>,
@@ -63,6 +68,25 @@ export const getHousingAmountForCutoff = (
   }
 
   return totalHousingCost / activeCutoffCount
+}
+
+export const getFixedExpenseAmountForCutoff = (
+  fixedExpense: FixedExpense,
+  cutoffId?: string,
+): number => {
+  if (!fixedExpense.isActive || !cutoffId) {
+    return 0
+  }
+
+  if (fixedExpense.budgetApplication === 'whole-month') {
+    return 0
+  }
+
+  if (fixedExpense.budgetApplication === 'specific-cutoff') {
+    return fixedExpense.cutoffId === cutoffId ? fixedExpense.amount : 0
+  }
+
+  return fixedExpense.amount
 }
 
 export const getTotalFixedExpenses = (
@@ -136,7 +160,13 @@ export const getBudgetTotals = (budgetData: BudgetData): BudgetTotals => {
     configuredBaseIncome +
     getAllowanceIncome(budgetData.settings.allowancePlan, budgetData.settings.viewMode)
 
-  const totalFixedExpenses = sumAmounts(budgetData.settings.fixedExpenses)
+  const totalFixedExpenses = budgetData.settings.fixedExpenses.reduce((sum, expense) => {
+    if (!expense.isActive || expense.budgetApplication !== 'whole-month') {
+      return sum
+    }
+
+    return sum + expense.amount
+  }, 0)
   const totalPayrollDeductions = getPayrollDeductionTotal(budgetData.settings.payrollDeductions)
   const totalHousingCost = getHousingCost(budgetData.settings.housingPlan)
   const totalVariableExpenses = getTotalExpenses(budgetData.expenses)
@@ -166,6 +196,92 @@ export const getCutoffRangeLabel = (cutoff: CutoffDefinition): string => {
   return `${startDay}-${endDay}`
 }
 
+export const getMonthCycleKey = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+
+export const getCutoffRangeForDate = (
+  date: Date,
+  cutoff: CutoffDefinition,
+) => {
+  const year = date.getFullYear()
+  const month = date.getMonth()
+  const day = date.getDate()
+
+  if (cutoff.startDay <= cutoff.endDay) {
+    const anchoredMonth = day < cutoff.startDay ? month - 1 : month
+    const startDay = clampDayToMonth(year, anchoredMonth, cutoff.startDay)
+    const endDay = clampDayToMonth(year, anchoredMonth, cutoff.endDay)
+
+    return {
+      start: new Date(year, anchoredMonth, startDay),
+      end: new Date(year, anchoredMonth, endDay, 23, 59, 59, 999),
+    }
+  }
+
+  if (day >= cutoff.startDay) {
+    const startDay = clampDayToMonth(year, month, cutoff.startDay)
+    const endDay = clampDayToMonth(year, month + 1, cutoff.endDay)
+
+    return {
+      start: new Date(year, month, startDay),
+      end: new Date(year, month + 1, endDay, 23, 59, 59, 999),
+    }
+  }
+
+  const startDay = clampDayToMonth(year, month - 1, cutoff.startDay)
+  const endDay = clampDayToMonth(year, month, cutoff.endDay)
+
+  return {
+    start: new Date(year, month - 1, startDay),
+    end: new Date(year, month, endDay, 23, 59, 59, 999),
+  }
+}
+
+export const getCutoffCycleKey = (
+  cutoff: CutoffDefinition,
+  date: Date,
+) => {
+  const range = getCutoffRangeForDate(date, cutoff)
+  return `${cutoff.id}:${getMonthCycleKey(range.start)}`
+}
+
+export const getCurrentBudgetCycle = (
+  budgetData: BudgetData,
+  now = new Date(),
+): BudgetCycleSnapshot => {
+  if (budgetData.settings.viewMode === 'monthly') {
+    return {
+      key: getMonthCycleKey(now),
+      label: now.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }),
+      rangeLabel: getMonthCycleKey(now),
+      type: 'monthly',
+    }
+  }
+
+  const currentCutoff = getCurrentCutoff(budgetData, now)
+
+  if (!currentCutoff) {
+    return {
+      key: `cutoff-unmatched:${getMonthCycleKey(now)}`,
+      label: 'Unmatched cutoff',
+      rangeLabel: getMonthCycleKey(now),
+      type: 'cutoff',
+    }
+  }
+
+  const range = getCutoffRangeForDate(now, currentCutoff)
+
+  return {
+    key: getCutoffCycleKey(currentCutoff, now),
+    label: currentCutoff.label,
+    rangeLabel: `${range.start.toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+    })} - ${range.end.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`,
+    type: 'cutoff',
+  }
+}
+
 export const getCutoffForDate = (
   dateInput: string | Date,
   cutoffs: CutoffDefinition[],
@@ -191,7 +307,10 @@ export const getCutoffForDate = (
 
 export const getCurrentCutoff = (budgetData: BudgetData, now = new Date()) =>
   budgetData.settings.viewMode === 'cutoff'
-    ? getCutoffForDate(now, budgetData.settings.cutoffs)
+    ? budgetData.settings.cutoffs.find(
+        (cutoff) =>
+          cutoff.isActive && cutoff.id === budgetData.settings.activeCutoffId,
+      ) ?? getCutoffForDate(now, budgetData.settings.cutoffs)
     : undefined
 
 export const getCutoffSummaries = (budgetData: BudgetData): CutoffSummary[] =>
@@ -213,11 +332,15 @@ export const getCutoffSummaries = (budgetData: BudgetData): CutoffSummary[] =>
             .filter((expense) => expense.cutoffId === cutoff.id)
             .reduce((sum, expense) => sum + expense.amount, 0)
 
-          const cutoffFixedExpenses = budgetData.settings.fixedExpenses
-            .filter(
-              (expense) => expense.isActive && (!expense.cutoffId || expense.cutoffId === cutoff.id),
+          const cutoffFixedExpenses = budgetData.settings.fixedExpenses.reduce((sum, expense) => {
+            return (
+              sum +
+              getFixedExpenseAmountForCutoff(
+                expense,
+                cutoff.id,
+              )
             )
-            .reduce((sum, expense) => sum + expense.amount, 0)
+          }, 0)
           const cutoffPayrollDeductions = budgetData.settings.payrollDeductions
             .filter(
               (deduction) =>
@@ -254,6 +377,7 @@ export const getCurrentBudgetSnapshot = (budgetData: BudgetData, now = new Date(
   const currentCutoff = getCurrentCutoff(budgetData, now)
   const totals = getBudgetTotals(budgetData)
   const cutoffSummaries = getCutoffSummaries(budgetData)
+  const currentCycle = getCurrentBudgetCycle(budgetData, now)
   const currentCutoffSummary = currentCutoff
     ? cutoffSummaries.find((cutoff) => cutoff.cutoffId === currentCutoff.id)
     : undefined
@@ -273,6 +397,7 @@ export const getCurrentBudgetSnapshot = (budgetData: BudgetData, now = new Date(
 
   return {
     currentCutoff,
+    currentCycle,
     totals,
     currentPeriodTotals,
     cutoffSummaries,

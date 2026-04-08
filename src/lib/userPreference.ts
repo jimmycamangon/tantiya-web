@@ -3,6 +3,7 @@ import type { UserProfile } from '../types/userProfile'
 export const USER_PROFILE_STORAGE_KEY = 'tantiya_user_profile'
 export const THEME_STORAGE_KEY = 'theme'
 export const NAV_EXPANDED_STORAGE_KEY = 'nav_expanded'
+export const USER_PROFILE_UPDATED_EVENT = 'tantiya:profile-updated'
 
 const defaultUserProfile: UserProfile = {
   fullName: 'Tantiya User',
@@ -45,6 +46,7 @@ export function readUserProfile() {
 
 export function saveUserProfile(profile: UserProfile) {
   localStorage.setItem(USER_PROFILE_STORAGE_KEY, JSON.stringify(profile))
+  window.dispatchEvent(new Event(USER_PROFILE_UPDATED_EVENT))
   return profile
 }
 

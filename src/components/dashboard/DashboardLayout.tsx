@@ -8,6 +8,7 @@ import {
   readUserProfile,
   saveNavExpandedPreference,
   saveThemePreference,
+  USER_PROFILE_UPDATED_EVENT,
 } from '../../lib/userPreference'
 import DashboardSidebar from './DashboardSidebar'
 import DashboardTopbar from './DashboardTopbar'
@@ -79,9 +80,11 @@ export default function DashboardLayout() {
 
     window.addEventListener('storage', syncProfile)
     window.addEventListener('focus', syncProfile)
+    window.addEventListener(USER_PROFILE_UPDATED_EVENT, syncProfile)
     return () => {
       window.removeEventListener('storage', syncProfile)
       window.removeEventListener('focus', syncProfile)
+      window.removeEventListener(USER_PROFILE_UPDATED_EVENT, syncProfile)
     }
   }, [])
 
@@ -228,7 +231,8 @@ export default function DashboardLayout() {
           />
 
           <main className="relative z-0 w-full flex-1 p-6">
-            <div className="muted-copy mb-4 flex flex-wrap items-center gap-1 text-sm">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div className="muted-copy flex flex-wrap items-center gap-1 text-sm">
               {breadcrumbTrail.map((crumb, index) => {
                 const isLast = index === breadcrumbTrail.length - 1
                 return (
@@ -248,6 +252,10 @@ export default function DashboardLayout() {
                   </span>
                 )
               })}
+              </div>
+              <span className="hidden rounded-full border border-border bg-card px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground lg:inline-flex">
+                Local-first workspace
+              </span>
             </div>
 
             <Outlet />

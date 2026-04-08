@@ -23,9 +23,27 @@ const normalizeBudgetData = (value: unknown): BudgetData => {
       typeof raw.createdAt === 'string' ? raw.createdAt : empty.createdAt,
     updatedAt:
       typeof raw.updatedAt === 'string' ? raw.updatedAt : empty.updatedAt,
+    lifecycle: {
+      lastSeenCycleKey:
+        typeof raw.lifecycle?.lastSeenCycleKey === 'string'
+          ? raw.lifecycle.lastSeenCycleKey
+          : undefined,
+      lastSeenCycleLabel:
+        typeof raw.lifecycle?.lastSeenCycleLabel === 'string'
+          ? raw.lifecycle.lastSeenCycleLabel
+          : undefined,
+      lastRolloverAt:
+        typeof raw.lifecycle?.lastRolloverAt === 'string'
+          ? raw.lifecycle.lastRolloverAt
+          : undefined,
+    },
     settings: {
       ...DEFAULT_SETTINGS,
       ...raw.settings,
+      activeCutoffId:
+        typeof raw.settings?.activeCutoffId === 'string'
+          ? raw.settings.activeCutoffId
+          : undefined,
       allowancePlan: {
         ...DEFAULT_SETTINGS.allowancePlan,
         ...raw.settings?.allowancePlan,
@@ -47,7 +65,24 @@ const normalizeBudgetData = (value: unknown): BudgetData => {
             : undefined,
       },
       fixedExpenses: Array.isArray(raw.settings?.fixedExpenses)
-        ? raw.settings.fixedExpenses
+        ? raw.settings.fixedExpenses.map((expense) => ({
+            ...expense,
+            budgetApplication:
+              expense?.budgetApplication === 'every-cutoff' ||
+              expense?.budgetApplication === 'specific-cutoff'
+                ? expense.budgetApplication
+                : 'whole-month',
+            amount: typeof expense?.amount === 'number' ? expense.amount : 0,
+            dueDay: typeof expense?.dueDay === 'number' ? expense.dueDay : undefined,
+            cutoffDueDays:
+              expense?.cutoffDueDays && typeof expense.cutoffDueDays === 'object'
+                ? Object.fromEntries(
+                    Object.entries(expense.cutoffDueDays).filter(
+                      ([key, value]) => typeof key === 'string' && typeof value === 'number',
+                    ),
+                  )
+                : undefined,
+          }))
         : [],
       cutoffs: Array.isArray(raw.settings?.cutoffs)
         ? raw.settings.cutoffs.map((cutoff, index) => ({
@@ -63,6 +98,15 @@ const normalizeBudgetData = (value: unknown): BudgetData => {
     },
     incomes: Array.isArray(raw.incomes) ? raw.incomes : [],
     expenses: Array.isArray(raw.expenses) ? raw.expenses : [],
+    fixedExpensePayments: Array.isArray(raw.fixedExpensePayments)
+      ? raw.fixedExpensePayments.filter(
+          (record) =>
+            typeof record?.id === 'string' &&
+            typeof record?.fixedExpenseId === 'string' &&
+            typeof record?.cycleKey === 'string' &&
+            typeof record?.markedPaidAt === 'string',
+        )
+      : [],
   }
 }
 
