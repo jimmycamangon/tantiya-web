@@ -60,7 +60,13 @@ export default function DashboardSidebar({
         </button>
       </div>
 
-      <nav className={['flex-1 overflow-visible p-3', collapsed ? 'flex flex-col items-center' : ''].join(' ')}>
+      <nav
+        className={[
+          'flex-1 min-h-0 p-3',
+          mobile ? 'overflow-y-auto overscroll-contain' : 'overflow-visible',
+          collapsed ? 'flex flex-col items-center' : '',
+        ].join(' ')}
+      >
         {showFullLogo && (
           <div className="mb-3 px-2">
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
