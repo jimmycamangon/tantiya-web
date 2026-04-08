@@ -21,6 +21,7 @@ export default function DashboardSidebar({
   profileInitials,
 }: DashboardSidebarProps) {
   const showFullLogo = mobile || expanded
+  const collapsed = !showFullLogo
 
   return (
     <>
@@ -28,7 +29,10 @@ export default function DashboardSidebar({
         <button
           type="button"
           onClick={onToggleExpanded}
-          className="flex w-full min-w-0 cursor-pointer items-center gap-3 rounded-2xl border border-border/70 bg-card/50 px-3 py-3 text-left transition-colors hover:bg-accent"
+          className={[
+            'flex w-full min-w-0 cursor-pointer items-center rounded-2xl border border-border/70 bg-card/50 py-3 text-left transition-colors hover:bg-accent',
+            showFullLogo ? 'gap-3 px-3' : 'justify-center px-0',
+          ].join(' ')}
           aria-label="Toggle logo details"
         >
           {showFullLogo ? (
@@ -56,7 +60,7 @@ export default function DashboardSidebar({
         </button>
       </div>
 
-      <nav className="flex-1 overflow-visible p-3">
+      <nav className={['flex-1 overflow-visible p-3', collapsed ? 'flex flex-col items-center' : ''].join(' ')}>
         {showFullLogo && (
           <div className="mb-3 px-2">
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
@@ -65,7 +69,7 @@ export default function DashboardSidebar({
           </div>
         )}
 
-        <div className="space-y-2">
+        <div className={['space-y-2', collapsed ? 'w-full max-w-[4.5rem]' : ''].join(' ')}>
         {navItems.map((item) => {
           const Icon = item.icon
           const isActive = activeId === item.id
@@ -76,7 +80,11 @@ export default function DashboardSidebar({
               <button
                 type="button"
                 onClick={() => onNavigate(item.id)}
-                className={`nav-item-base ${isActive ? 'nav-item-active' : 'nav-item-idle'}`}
+                className={[
+                  'nav-item-base',
+                  isActive ? 'nav-item-active' : 'nav-item-idle',
+                  canShowDetails ? '' : 'justify-center gap-0 px-0',
+                ].join(' ')}
               >
                 <span className={`nav-icon-chip ${isActive ? 'nav-icon-chip-active' : ''}`}>
                   <Icon className="h-4 w-4" strokeWidth={2} />
@@ -103,8 +111,8 @@ export default function DashboardSidebar({
       </nav>
 
       <div className="mt-auto border-t border-border p-3">
-        <div className="rounded-2xl border border-border/70 bg-card/60 p-2">
-          <div className="flex items-center gap-3">
+        <div className={['rounded-2xl border border-border/70 bg-card/60 p-2', collapsed ? 'mx-auto w-fit' : ''].join(' ')}>
+          <div className={['flex items-center gap-3', collapsed ? 'justify-center' : ''].join(' ')}>
           {profile.avatarDataUrl ? (
             <img
               src={profile.avatarDataUrl}
