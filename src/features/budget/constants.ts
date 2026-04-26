@@ -22,6 +22,12 @@ export const DEFAULT_SETTINGS: BudgetSettings = {
     frequency: 'monthly',
     label: 'Allowance',
   },
+  cutoffCarryoverPlan: {
+    enabled: false,
+    amount: 0,
+    cutoffId: undefined,
+    note: '',
+  },
   payrollDeductions: [
     { id: 'deduction-sss', type: 'sss', label: 'SSS', amount: 0, enabled: false },
     { id: 'deduction-pagibig', type: 'pagibig', label: 'Pag-IBIG', amount: 0, enabled: false },

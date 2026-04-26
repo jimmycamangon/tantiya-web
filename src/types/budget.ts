@@ -70,6 +70,13 @@ export interface AllowancePlan {
   label: string
 }
 
+export interface CutoffCarryoverPlan {
+  enabled: boolean
+  amount: number
+  cutoffId?: string
+  note?: string
+}
+
 export interface PayrollDeduction {
   id: string
   type: PayrollDeductionType
@@ -119,6 +126,7 @@ export interface BudgetSettings {
   monthlyIncomeTarget: number
   savingsBuffer: number
   allowancePlan: AllowancePlan
+  cutoffCarryoverPlan: CutoffCarryoverPlan
   payrollDeductions: PayrollDeduction[]
   fixedExpenses: FixedExpense[]
   housingPlan: HousingPlan
@@ -151,6 +159,7 @@ export interface CutoffSummary {
   label: string
   rangeLabel: string
   totalIncome: number
+  carryoverAmount: number
   totalFixedExpenses: number
   totalPayrollDeductions: number
   totalHousingCost: number

@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useBudgetStore } from '@/hooks/useBudgetStore'
 
@@ -17,8 +17,27 @@ const getExpectedPayoutLabel = (offsetDays?: number) => {
 }
 
 export default function CutoffsPage() {
-  const { budgetData, snapshot } = useBudgetStore()
+  const { budgetData, patchSettings, snapshot } = useBudgetStore()
   const isCutoffMode = budgetData.settings.viewMode === 'cutoff'
+  const [carryoverAmount, setCarryoverAmount] = useState(
+    String(budgetData.settings.cutoffCarryoverPlan.amount || ''),
+  )
+  const [carryoverCutoffId, setCarryoverCutoffId] = useState(
+    budgetData.settings.cutoffCarryoverPlan.cutoffId ?? snapshot.currentCutoff?.id ?? '',
+  )
+  const [carryoverNote, setCarryoverNote] = useState(budgetData.settings.cutoffCarryoverPlan.note ?? '')
+
+  useEffect(() => {
+    setCarryoverAmount(
+      budgetData.settings.cutoffCarryoverPlan.amount > 0
+        ? String(budgetData.settings.cutoffCarryoverPlan.amount)
+        : '',
+    )
+    setCarryoverCutoffId(
+      budgetData.settings.cutoffCarryoverPlan.cutoffId ?? snapshot.currentCutoff?.id ?? '',
+    )
+    setCarryoverNote(budgetData.settings.cutoffCarryoverPlan.note ?? '')
+  }, [budgetData.settings.cutoffCarryoverPlan, snapshot.currentCutoff])
 
   const cutoffCards = useMemo(() => {
     return budgetData.settings.cutoffs
@@ -32,6 +51,7 @@ export default function CutoffsPage() {
           rangeLabel: `${cutoff.startDay}-${cutoff.endDay}`,
           payoutLabel: getExpectedPayoutLabel(cutoff.expectedPayoutOffsetDays),
           totalIncome: summary?.totalIncome ?? 0,
+          carryoverAmount: summary?.carryoverAmount ?? 0,
           totalExpenses: summary?.totalExpenses ?? 0,
           remainingBudget: summary?.remainingBudget ?? 0,
           isCurrent: snapshot.currentCutoff?.id === cutoff.id,
@@ -40,6 +60,19 @@ export default function CutoffsPage() {
   }, [budgetData.settings.cutoffs, snapshot.currentCutoff, snapshot.cutoffSummaries])
 
   const totalTrackedCutoffExpenses = cutoffCards.reduce((sum, cutoff) => sum + cutoff.totalExpenses, 0)
+  const saveCarryover = () => {
+    const nextAmount = Number(carryoverAmount)
+    const normalizedAmount = Number.isFinite(nextAmount) && nextAmount > 0 ? nextAmount : 0
+
+    patchSettings({
+      cutoffCarryoverPlan: {
+        enabled: normalizedAmount > 0 && carryoverCutoffId.length > 0,
+        amount: normalizedAmount,
+        cutoffId: carryoverCutoffId || undefined,
+        note: carryoverNote.trim(),
+      },
+    })
+  }
 
   return (
     <section className="space-y-6">
@@ -130,6 +163,94 @@ export default function CutoffsPage() {
           </section>
 
           <section className="surface-card rounded-[1.75rem] p-5">
+            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.24em] text-amber-700 dark:text-amber-300">
+                  Carryover wallet
+                </p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Add the leftover amount from your previous cutoff to the cutoff you are using now
+                  so the live balance reflects what is still in your wallet.
+                </p>
+              </div>
+              <div className="rounded-2xl bg-muted/50 px-4 py-3 text-sm">
+                <p className="text-muted-foreground">Active carryover</p>
+                <p className="mt-1 font-semibold text-foreground">
+                  {toCurrency(budgetData.settings.cutoffCarryoverPlan.amount)}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <label className="space-y-2">
+                <span className="text-sm font-medium text-foreground">Apply carryover to</span>
+                <select
+                  value={carryoverCutoffId}
+                  onChange={(event) => setCarryoverCutoffId(event.target.value)}
+                  className="ui-input"
+                >
+                  <option value="">No cutoff selected</option>
+                  {budgetData.settings.cutoffs
+                    .filter((cutoff) => cutoff.isActive)
+                    .map((cutoff) => (
+                      <option key={cutoff.id} value={cutoff.id}>
+                        {cutoff.label}
+                      </option>
+                    ))}
+                </select>
+              </label>
+
+              <label className="space-y-2">
+                <span className="text-sm font-medium text-foreground">Carryover amount</span>
+                <input
+                  type="number"
+                  min="0"
+                  value={carryoverAmount}
+                  onChange={(event) => setCarryoverAmount(event.target.value)}
+                  className="ui-input"
+                  placeholder="2500"
+                />
+              </label>
+
+              <label className="space-y-2 md:col-span-2">
+                <span className="text-sm font-medium text-foreground">Note</span>
+                <input
+                  type="text"
+                  value={carryoverNote}
+                  onChange={(event) => setCarryoverNote(event.target.value)}
+                  className="ui-input"
+                  placeholder="Left from last cutoff"
+                />
+              </label>
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-3">
+              <button type="button" onClick={saveCarryover} className="public-primary-button px-5">
+                Save carryover
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setCarryoverAmount('')
+                  setCarryoverCutoffId(snapshot.currentCutoff?.id ?? '')
+                  setCarryoverNote('')
+                  patchSettings({
+                    cutoffCarryoverPlan: {
+                      enabled: false,
+                      amount: 0,
+                      cutoffId: undefined,
+                      note: '',
+                    },
+                  })
+                }}
+                className="public-outline-button px-5"
+              >
+                Clear carryover
+              </button>
+            </div>
+          </section>
+
+          <section className="surface-card rounded-[1.75rem] p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.24em] text-amber-700 dark:text-amber-300">
@@ -194,6 +315,17 @@ export default function CutoffsPage() {
                             {toCurrency(cutoff.totalExpenses)}
                           </p>
                         </div>
+                        <div>
+                          <p className={cutoff.isCurrent ? 'text-xs uppercase tracking-[0.16em] text-emerald-100/75' : 'text-xs uppercase tracking-[0.16em] text-muted-foreground'}>
+                            Carryover
+                          </p>
+                          <p className="mt-1 font-semibold">
+                            {toCurrency(cutoff.carryoverAmount)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-3 sm:min-w-[9rem] sm:text-right">
                         <div>
                           <p className={cutoff.isCurrent ? 'text-xs uppercase tracking-[0.16em] text-emerald-100/75' : 'text-xs uppercase tracking-[0.16em] text-muted-foreground'}>
                             Remaining

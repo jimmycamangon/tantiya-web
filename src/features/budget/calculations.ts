@@ -126,6 +126,22 @@ export const getAllowanceAmountForCutoff = (
   return allowancePlan.amount / activeCutoffCount
 }
 
+export const getCarryoverAmountForCutoff = (
+  carryoverPlan: BudgetData['settings']['cutoffCarryoverPlan'],
+  cutoffId?: string,
+): number => {
+  if (
+    !carryoverPlan.enabled ||
+    !cutoffId ||
+    carryoverPlan.cutoffId !== cutoffId ||
+    carryoverPlan.amount <= 0
+  ) {
+    return 0
+  }
+
+  return carryoverPlan.amount
+}
+
 export const getConfiguredCutoffIncome = (cutoffs: CutoffDefinition[]): number =>
   cutoffs.reduce((sum, cutoff) => {
     if (!cutoff.isActive) {
@@ -352,6 +368,10 @@ export const getCutoffSummaries = (budgetData: BudgetData): CutoffSummary[] =>
             budgetData.settings.cutoffs,
             cutoff.id,
           )
+          const carryoverAmount = getCarryoverAmountForCutoff(
+            budgetData.settings.cutoffCarryoverPlan,
+            cutoff.id,
+          )
           const resolvedIncome =
             (totalIncome > 0 ? totalIncome : cutoff.expectedIncomeAmount ?? 0) + allowanceForCutoff
 
@@ -360,16 +380,18 @@ export const getCutoffSummaries = (budgetData: BudgetData): CutoffSummary[] =>
             label: cutoff.label,
             rangeLabel: getCutoffRangeLabel(cutoff),
             totalIncome: resolvedIncome,
+            carryoverAmount,
             totalFixedExpenses: cutoffFixedExpenses,
             totalPayrollDeductions: cutoffPayrollDeductions,
             totalHousingCost: cutoffHousingCost,
             totalExpenses,
             remainingBudget:
               resolvedIncome -
-              totalExpenses -
               cutoffFixedExpenses -
               cutoffPayrollDeductions -
-              cutoffHousingCost,
+              cutoffHousingCost +
+              carryoverAmount -
+              totalExpenses,
           }
         })
 

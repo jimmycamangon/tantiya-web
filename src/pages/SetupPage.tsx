@@ -42,6 +42,7 @@ const cloneSettings = (settings: BudgetSettings): BudgetSettings => ({
   cutoffs: settings.cutoffs.map((cutoff) => ({ ...cutoff })),
   quickAmountPresets: settings.quickAmountPresets.map((preset) => ({ ...preset })),
   allowancePlan: { ...settings.allowancePlan },
+  cutoffCarryoverPlan: { ...settings.cutoffCarryoverPlan },
   payrollDeductions: settings.payrollDeductions.map((deduction) => ({ ...deduction })),
   housingPlan: { ...settings.housingPlan },
 })
@@ -372,6 +373,7 @@ export default function SetupPage() {
         fixed: fixedExpenseTotal,
         payroll: payrollDeductionTotal,
         housing: activeHousingAmount,
+        carryover: 0,
         savings: form.savingsBuffer,
         remaining,
         note:
@@ -394,6 +396,7 @@ export default function SetupPage() {
         fixed: 0,
         payroll: 0,
         housing: 0,
+        carryover: 0,
         savings: 0,
         remaining: 0,
         note: 'No active cutoff is available for this preview yet.',
@@ -421,6 +424,10 @@ export default function SetupPage() {
       return sum + deduction.amount
     }, 0)
     const focusedHousing = getHousingAmountForCutoff(form.housingPlan, activeCutoffs, focusedCutoff.id)
+    const focusedCarryover =
+      form.cutoffCarryoverPlan.enabled && form.cutoffCarryoverPlan.cutoffId === focusedCutoff.id
+        ? form.cutoffCarryoverPlan.amount
+        : 0
     const income = focusedCutoff.expectedIncomeAmount + focusedAllowance
 
     return {
@@ -433,8 +440,9 @@ export default function SetupPage() {
       fixed: focusedFixed,
       payroll: focusedPayroll,
       housing: focusedHousing,
+      carryover: focusedCarryover,
       savings: 0,
-      remaining: income - focusedFixed - focusedPayroll - focusedHousing,
+      remaining: income + focusedCarryover - focusedFixed - focusedPayroll - focusedHousing,
       note:
         form.housingPlan.enabled && form.housingPlan.budgetApplication !== 'whole-month'
           ? 'Cutoff preview focuses on the selected payroll period and includes the housing amount assigned to this cutoff.'
@@ -1795,6 +1803,14 @@ export default function SetupPage() {
                 <span className="text-muted-foreground">Payroll deductions</span>
                 <span className="font-semibold text-foreground">PHP {previewData.payroll.toLocaleString()}</span>
               </div>
+              {form.viewMode === 'cutoff' && (
+                <div className="flex items-center justify-between gap-3 rounded-xl bg-muted/50 px-4 py-3">
+                  <span className="text-muted-foreground">Carryover to cutoff</span>
+                  <span className="font-semibold text-foreground">
+                    PHP {previewData.carryover.toLocaleString()}
+                  </span>
+                </div>
+              )}
               <div className="flex items-center justify-between gap-3 rounded-xl bg-muted/50 px-4 py-3">
                 <span className="text-muted-foreground">Housing active</span>
                 <span className="font-semibold text-foreground">

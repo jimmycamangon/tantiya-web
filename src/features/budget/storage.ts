@@ -48,6 +48,22 @@ const normalizeBudgetData = (value: unknown): BudgetData => {
         ...DEFAULT_SETTINGS.allowancePlan,
         ...raw.settings?.allowancePlan,
       },
+      cutoffCarryoverPlan: {
+        ...DEFAULT_SETTINGS.cutoffCarryoverPlan,
+        ...raw.settings?.cutoffCarryoverPlan,
+        amount:
+          typeof raw.settings?.cutoffCarryoverPlan?.amount === 'number'
+            ? raw.settings.cutoffCarryoverPlan.amount
+            : 0,
+        cutoffId:
+          typeof raw.settings?.cutoffCarryoverPlan?.cutoffId === 'string'
+            ? raw.settings.cutoffCarryoverPlan.cutoffId
+            : undefined,
+        note:
+          typeof raw.settings?.cutoffCarryoverPlan?.note === 'string'
+            ? raw.settings.cutoffCarryoverPlan.note
+            : '',
+      },
       payrollDeductions: Array.isArray(raw.settings?.payrollDeductions)
         ? raw.settings.payrollDeductions.map((deduction, index) => ({
             ...DEFAULT_SETTINGS.payrollDeductions[index % DEFAULT_SETTINGS.payrollDeductions.length],

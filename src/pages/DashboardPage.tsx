@@ -54,9 +54,10 @@ export default function DashboardPage() {
         savingsBuffer: 0,
         remainingBudget: focusedCutoffSummary.remainingBudget,
       }
-    : isCutoffMode
-      ? snapshot.currentPeriodTotals
-      : snapshot.totals
+      : isCutoffMode
+        ? snapshot.currentPeriodTotals
+        : snapshot.totals
+  const scopedCarryoverAmount = isCutoffMode ? (focusedCutoffSummary?.carryoverAmount ?? 0) : 0
 
   useEffect(() => {
     if (!isCutoffMode) {
@@ -381,6 +382,15 @@ export default function DashboardPage() {
               : 'Allowance is added to the monthly budget.',
       ],
       [
+        'Carryover in view',
+        `PHP ${(focusedCutoffSummary?.carryoverAmount ?? 0).toLocaleString()}`,
+        isCutoffMode
+          ? focusedCutoffSummary?.carryoverAmount
+            ? 'This is the leftover wallet amount you manually moved into the focused cutoff.'
+            : 'No carryover amount is added to the focused cutoff right now.'
+          : 'Carryover is only used while tracking by cutoff.',
+      ],
+      [
         'Reserved savings',
         `PHP ${budgetData.settings.savingsBuffer.toLocaleString()}`,
         isCutoffMode
@@ -413,7 +423,16 @@ export default function DashboardPage() {
           : 'Cutoff grouping is turned off for this setup.',
       ],
     ],
-    [allowanceDisplayAmount, budgetData.settings, currentCutoffLabel, cutoffView, isCutoffMode, scopedTotals, snapshot],
+    [
+      allowanceDisplayAmount,
+      budgetData.settings,
+      currentCutoffLabel,
+      cutoffView,
+      focusedCutoffSummary,
+      isCutoffMode,
+      scopedTotals,
+      snapshot,
+    ],
   )
 
   return (
@@ -470,11 +489,11 @@ export default function DashboardPage() {
               <p className="text-4xl font-bold tracking-[-0.06em] text-foreground sm:text-5xl">
                 {toCurrency(scopedTotals.remainingBudget)}
               </p>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
-                {isCutoffMode
-                  ? 'This is the remaining budget for the active focused cutoff after its assigned bills, payroll deductions, housing allocation, and logged gastos.'
-                  : 'This is your remaining whole-month budget after recurring obligations, housing, reserved savings, and logged gastos.'}
-              </p>
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
+                  {isCutoffMode
+                    ? 'This is the remaining budget for the active focused cutoff after its assigned bills, payroll deductions, housing allocation, logged gastos, and any carryover you added.'
+                    : 'This is your remaining whole-month budget after recurring obligations, housing, reserved savings, and logged gastos.'}
+                </p>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2 xl:w-[23rem] xl:flex-none">
@@ -494,6 +513,14 @@ export default function DashboardPage() {
                   )}
                 </p>
               </div>
+              {isCutoffMode && (
+                <div className="rounded-2xl border border-emerald-200/70 bg-[rgba(255,251,244,0.74)] px-4 py-4 backdrop-blur dark:border-white/10 dark:bg-white/5 sm:col-span-2">
+                  <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Carryover in view</p>
+                  <p className="mt-2 text-xl font-semibold text-foreground">
+                    {toCurrency(scopedCarryoverAmount)}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </article>
@@ -741,7 +768,7 @@ export default function DashboardPage() {
                       Days {cutoff.rangeLabel}
                     </span>
                   </div>
-                  <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                  <div className="mt-3 grid gap-3 sm:grid-cols-4">
                     <div>
                       <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
                         Income
@@ -756,6 +783,14 @@ export default function DashboardPage() {
                       </p>
                       <p className="mt-1 font-semibold text-foreground">
                         PHP {cutoff.totalExpenses.toLocaleString()}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                        Carryover
+                      </p>
+                      <p className="mt-1 font-semibold text-foreground">
+                        PHP {cutoff.carryoverAmount.toLocaleString()}
                       </p>
                     </div>
                     <div>
