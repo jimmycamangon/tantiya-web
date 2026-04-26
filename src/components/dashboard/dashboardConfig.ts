@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react'
 import {
   BarChart3,
+  BookOpen,
   CalendarRange,
   History,
   HandCoins,
@@ -30,6 +31,12 @@ export const routeMeta: Record<string, RouteMeta> = {
     title: 'Dashboard',
     description: 'Budget overview and current balance',
     breadcrumbs: ['dashboard'],
+  },
+  guide: {
+    path: '/guide',
+    title: 'Getting Started',
+    description: 'Step-by-step guide for new users',
+    breadcrumbs: ['guide'],
   },
   quickDeduct: {
     path: '/quick-deduct',
@@ -81,6 +88,12 @@ export const navItems: NavItem[] = [
     icon: LayoutDashboard,
     title: 'Dashboard',
     detail: 'Current budget pulse',
+  },
+  {
+    id: 'guide',
+    icon: BookOpen,
+    title: 'Getting Started',
+    detail: 'New user walkthrough',
   },
   {
     id: 'quickDeduct',

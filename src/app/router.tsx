@@ -4,6 +4,7 @@ import RootLayout from '@/layouts/RootLayout'
 import AnalysisPage from '@/pages/AnalysisPage'
 import CutoffsPage from '@/pages/CutoffsPage'
 import DashboardPage from '@/pages/DashboardPage'
+import GettingStartedPage from '@/pages/GettingStartedPage'
 import HistoryPage from '@/pages/HistoryPage'
 import IncomePage from '@/pages/IncomePage'
 import LandingPage from '@/pages/LandingPage'
@@ -34,6 +35,10 @@ export const router = createBrowserRouter([
       {
         path: '/dashboard',
         element: <DashboardPage />,
+      },
+      {
+        path: '/guide',
+        element: <GettingStartedPage />,
       },
       {
         path: '/quick-deduct',

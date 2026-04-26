@@ -148,6 +148,9 @@ export default function StartPage() {
           <Link to="/" className="public-outline-button mt-6 px-5">
             Back to landing
           </Link>
+          <Link to="/guide" className="public-outline-button mt-3 px-5">
+            Open full guide
+          </Link>
         </aside>
       </div>
     </section>
