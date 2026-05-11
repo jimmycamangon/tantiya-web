@@ -1,5 +1,11 @@
 import { useMemo, useState } from 'react'
 import type { ChangeEvent } from 'react'
+import {
+  getAllowanceIncome,
+  getHousingCost,
+  getPayrollDeductionTotal,
+  isDateInSameMonth,
+} from '@/features/budget/calculations'
 import { exportBudgetData } from '@/features/budget/storage'
 import { BUDGET_STORAGE_KEY } from '@/features/budget/constants'
 import { useBudgetStore } from '@/hooks/useBudgetStore'
@@ -50,6 +56,75 @@ export default function SettingsPage() {
     }),
     [budgetData],
   )
+  const liveStats = useMemo(() => {
+    const now = new Date()
+    const isCutoffMode = budgetData.settings.viewMode === 'cutoff'
+    const currentCutoffId = snapshot.currentCutoff?.id
+    const currentMonthExpenses = budgetData.expenses.filter((expense) =>
+      isDateInSameMonth(expense.createdAt, now),
+    )
+    const currentPeriodExpenses =
+      isCutoffMode && currentCutoffId
+        ? currentMonthExpenses.filter((expense) => expense.cutoffId === currentCutoffId)
+        : currentMonthExpenses
+    const currentMonthIncomes = budgetData.incomes.filter((income) =>
+      isDateInSameMonth(income.receivedAt, now),
+    )
+    const currentPeriodIncomes =
+      isCutoffMode && currentCutoffId
+        ? currentMonthIncomes.filter((income) => income.cutoffId === currentCutoffId)
+        : currentMonthIncomes
+
+    return {
+      periodLabel:
+        isCutoffMode && snapshot.currentCutoff
+          ? `${snapshot.currentCutoff.label} (${now.toLocaleDateString(undefined, {
+              month: 'long',
+              year: 'numeric',
+            })})`
+          : now.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }),
+      expenses: currentPeriodExpenses.length,
+      expenseTotal: currentPeriodExpenses.reduce((sum, expense) => sum + expense.amount, 0),
+      incomes: currentPeriodIncomes.length,
+      incomeTotal: currentPeriodIncomes.reduce((sum, income) => sum + income.amount, 0),
+    }
+  }, [budgetData.expenses, budgetData.incomes, budgetData.settings.viewMode, snapshot.currentCutoff])
+  const liveBudget = useMemo(() => {
+    if (budgetData.settings.viewMode === 'cutoff') {
+      return snapshot.currentPeriodTotals
+    }
+
+    const totalIncome =
+      liveStats.incomeTotal > 0
+        ? liveStats.incomeTotal
+        : budgetData.settings.monthlyIncomeTarget +
+          getAllowanceIncome(budgetData.settings.allowancePlan, budgetData.settings.viewMode)
+    const fixedExpenses = budgetData.settings.fixedExpenses.reduce((sum, expense) => {
+      if (!expense.isActive || expense.budgetApplication !== 'whole-month') {
+        return sum
+      }
+
+      return sum + expense.amount
+    }, 0)
+    const payrollDeductions = getPayrollDeductionTotal(budgetData.settings.payrollDeductions)
+    const housingCost = getHousingCost(budgetData.settings.housingPlan)
+    const remainingBudget =
+      totalIncome -
+      fixedExpenses -
+      payrollDeductions -
+      housingCost -
+      budgetData.settings.savingsBuffer -
+      liveStats.expenseTotal
+
+    return {
+      totalIncome,
+      totalFixedExpenses: fixedExpenses + payrollDeductions,
+      totalHousingCost: housingCost,
+      totalVariableExpenses: liveStats.expenseTotal,
+      savingsBuffer: budgetData.settings.savingsBuffer,
+      remainingBudget,
+    }
+  }, [budgetData.settings, liveStats.expenseTotal, liveStats.incomeTotal, snapshot.currentPeriodTotals])
 
   const storageSnapshot = useMemo(() => {
     const rawBudgetJson = exportBudgetData(budgetData)
@@ -371,23 +446,41 @@ export default function SettingsPage() {
                 </span>
               </div>
               <div className="flex items-center justify-between gap-3 rounded-xl bg-muted/50 px-4 py-3">
-                <span className="text-muted-foreground">Monthly income target</span>
+                <span className="text-muted-foreground">Live period</span>
                 <span className="font-semibold text-foreground">
-                  PHP {budgetData.settings.monthlyIncomeTarget.toLocaleString()}
+                  {liveStats.periodLabel}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-3 rounded-xl bg-muted/50 px-4 py-3">
+                <span className="text-muted-foreground">Income target</span>
+                <span className="font-semibold text-foreground">
+                  PHP {liveBudget.totalIncome.toLocaleString()}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-3 rounded-xl bg-muted/50 px-4 py-3">
                 <span className="text-muted-foreground">Remaining budget</span>
                 <span className="font-semibold text-foreground">
-                  PHP {snapshot.totals.remainingBudget.toLocaleString()}
+                  PHP {liveBudget.remainingBudget.toLocaleString()}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-3 rounded-xl bg-muted/50 px-4 py-3">
-                <span className="text-muted-foreground">Saved expenses</span>
+                <span className="text-muted-foreground">Live gastos</span>
+                <span className="font-semibold text-foreground">
+                  PHP {liveStats.expenseTotal.toLocaleString()} ({liveStats.expenses})
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-3 rounded-xl bg-muted/50 px-4 py-3">
+                <span className="text-muted-foreground">Live incomes logged</span>
+                <span className="font-semibold text-foreground">
+                  PHP {liveStats.incomeTotal.toLocaleString()} ({liveStats.incomes})
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-3 rounded-xl bg-muted/50 px-4 py-3">
+                <span className="text-muted-foreground">All saved expenses</span>
                 <span className="font-semibold text-foreground">{stats.expenses}</span>
               </div>
               <div className="flex items-center justify-between gap-3 rounded-xl bg-muted/50 px-4 py-3">
-                <span className="text-muted-foreground">Saved incomes</span>
+                <span className="text-muted-foreground">All saved incomes</span>
                 <span className="font-semibold text-foreground">{stats.incomes}</span>
               </div>
               <div className="flex items-center justify-between gap-3 rounded-xl bg-muted/50 px-4 py-3">

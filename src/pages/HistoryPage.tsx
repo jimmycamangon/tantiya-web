@@ -1,4 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import {
+  isDateInSameMonth,
+} from '@/features/budget/calculations'
 import { useBudgetStore } from '@/hooks/useBudgetStore'
 import type { ExpenseCategory, ExpenseEntry } from '@/types/budget'
 
@@ -29,6 +32,7 @@ export default function HistoryPage() {
   const { budgetData, snapshot, removeExpense, updateExpense } = useBudgetStore()
   const [categoryFilter, setCategoryFilter] = useState<'all' | ExpenseCategory>('all')
   const [periodFilter, setPeriodFilter] = useState<'all' | 'current-cutoff' | 'current-month'>('all')
+  const [visibleCount, setVisibleCount] = useState(25)
   const [searchQuery, setSearchQuery] = useState('')
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null)
   const [editDraft, setEditDraft] = useState<{
@@ -48,6 +52,10 @@ export default function HistoryPage() {
     [budgetData.settings.cutoffs],
   )
 
+  useEffect(() => {
+    setVisibleCount(25)
+  }, [categoryFilter, periodFilter, searchQuery])
+
   const filteredExpenses = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
 
@@ -61,6 +69,10 @@ export default function HistoryPage() {
 
         if (periodFilter === 'current-cutoff') {
           if (!snapshot.currentCutoff || expense.cutoffId !== snapshot.currentCutoff.id) {
+            return false
+          }
+
+          if (!isDateInSameMonth(expense.createdAt, new Date())) {
             return false
           }
         }
@@ -84,6 +96,7 @@ export default function HistoryPage() {
     () => filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0),
     [filteredExpenses],
   )
+  const visibleExpenses = filteredExpenses.slice(0, visibleCount)
   const monthExpenseTotal = useMemo(
     () =>
       budgetData.expenses.reduce((sum, expense) => {
@@ -249,7 +262,7 @@ export default function HistoryPage() {
               No matching expense entries yet.
             </div>
           ) : (
-            filteredExpenses.map((expense) => {
+            visibleExpenses.map((expense) => {
               const cutoffLabel = expense.cutoffId
                 ? budgetData.settings.cutoffs.find((cutoff) => cutoff.id === expense.cutoffId)?.label ?? 'Assigned cutoff'
                 : 'No cutoff tag'
@@ -302,6 +315,21 @@ export default function HistoryPage() {
             })
           )}
         </div>
+
+        {filteredExpenses.length > visibleExpenses.length && (
+          <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-border bg-muted/40 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-muted-foreground">
+              Showing {visibleExpenses.length} of {filteredExpenses.length} matching deductions.
+            </p>
+            <button
+              type="button"
+              onClick={() => setVisibleCount((current) => current + 25)}
+              className="ui-button"
+            >
+              Load 25 more
+            </button>
+          </div>
+        )}
       </section>
 
       {editingExpense && (

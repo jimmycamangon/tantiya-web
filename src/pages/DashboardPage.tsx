@@ -2,8 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   getCutoffCycleKey,
-  getCutoffRangeForDate,
+  getCutoffRangeForMonth,
   getMonthCycleKey,
+  isDateInSameMonth,
 } from '@/features/budget/calculations'
 import { useBudgetStore } from '@/hooks/useBudgetStore'
 
@@ -150,7 +151,7 @@ export default function DashboardPage() {
         : snapshot.currentCutoff
 
     if (isCutoffMode && reminderCutoff) {
-      const currentCutoffRange = getCutoffRangeForDate(today, reminderCutoff)
+      const currentCutoffRange = getCutoffRangeForMonth(today, reminderCutoff)
       const periodEndDate = currentCutoffRange.end
       const payoutDate = addDays(periodEndDate, reminderCutoff.expectedPayoutOffsetDays ?? 0)
       const daysUntilPayout = Math.ceil(
@@ -158,26 +159,44 @@ export default function DashboardPage() {
           new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime()) /
           86400000,
       )
-      const hasActualIncomeForCutoff = budgetData.incomes.some(
-        (income) => income.cutoffId === reminderCutoff.id,
+      const actualIncomeForCutoff = budgetData.incomes
+        .filter(
+          (income) =>
+            income.cutoffId === reminderCutoff.id &&
+            isDateInSameMonth(income.receivedAt, today),
+        )
+        .sort((left, right) => right.receivedAt.localeCompare(left.receivedAt))
+      const actualIncomeTotal = actualIncomeForCutoff.reduce(
+        (sum, income) => sum + income.amount,
+        0,
       )
 
       items.push({
         id: `payout-${reminderCutoff.id}`,
-        tone: daysUntilPayout <= 3 ? 'warning' : 'info',
-        title: `${reminderCutoff.label} payout reminder`,
-        body: `Expected income is ${toCurrency(
-          reminderCutoff.expectedIncomeAmount ?? 0,
-        )} with payout target on ${formatShortDate(payoutDate)}.`,
+        tone: actualIncomeForCutoff.length > 0 ? 'info' : daysUntilPayout <= 3 ? 'warning' : 'info',
+        title:
+          actualIncomeForCutoff.length > 0
+            ? `${reminderCutoff.label} payout logged`
+            : `${reminderCutoff.label} payout reminder`,
+        body:
+          actualIncomeForCutoff.length > 0
+            ? `${toCurrency(actualIncomeTotal)} was logged for this cutoff on ${formatShortDate(
+                new Date(actualIncomeForCutoff[0].receivedAt),
+              )}. Expected target was ${formatShortDate(payoutDate)}.`
+            : `Expected income is ${toCurrency(
+                reminderCutoff.expectedIncomeAmount ?? 0,
+              )} with payout target on ${formatShortDate(payoutDate)}.`,
         meta:
-          daysUntilPayout < 0
-            ? `${Math.abs(daysUntilPayout)} day(s) past expected payout`
-            : daysUntilPayout === 0
-              ? 'Expected today'
-              : `${daysUntilPayout} day(s) until payout`,
+          actualIncomeForCutoff.length > 0
+            ? 'Actual income recorded'
+            : daysUntilPayout < 0
+              ? `${Math.abs(daysUntilPayout)} day(s) past expected payout`
+              : daysUntilPayout === 0
+                ? 'Expected today'
+                : `${daysUntilPayout} day(s) until payout`,
       })
 
-      if (!hasActualIncomeForCutoff) {
+      if (actualIncomeForCutoff.length === 0) {
         items.push({
           id: `income-missing-${reminderCutoff.id}`,
           tone: 'warning',

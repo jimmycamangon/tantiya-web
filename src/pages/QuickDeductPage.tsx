@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { isDateInSameMonth } from '@/features/budget/calculations'
 import { useBudgetStore } from '@/hooks/useBudgetStore'
 import type { ExpenseCategory } from '@/types/budget'
 
@@ -27,8 +28,23 @@ export default function QuickDeductPage() {
   const currentCutoff = snapshot.currentCutoff
   const currentCutoffLabel = currentCutoff ? currentCutoff.label : isCutoffMode ? 'Not set' : 'Monthly cycle'
   const recentExpenses = useMemo(
-    () => budgetData.expenses.slice().sort((left, right) => right.createdAt.localeCompare(left.createdAt)).slice(0, 8),
-    [budgetData.expenses],
+    () =>
+      budgetData.expenses
+        .filter((expense) => {
+          if (!isDateInSameMonth(expense.createdAt, new Date())) {
+            return false
+          }
+
+          if (!isCutoffMode) {
+            return true
+          }
+
+          return Boolean(currentCutoff) && expense.cutoffId === currentCutoff.id
+        })
+        .slice()
+        .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+        .slice(0, 8),
+    [budgetData.expenses, currentCutoff, isCutoffMode],
   )
 
   const quickDeduct = () => {

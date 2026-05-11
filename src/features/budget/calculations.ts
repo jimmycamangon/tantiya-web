@@ -253,6 +253,51 @@ export const getCutoffRangeForDate = (
   }
 }
 
+export const getCutoffRangeForMonth = (
+  date: Date,
+  cutoff: CutoffDefinition,
+) => {
+  const year = date.getFullYear()
+  const month = date.getMonth()
+  const startDay = clampDayToMonth(year, month, cutoff.startDay)
+  const endMonth = cutoff.startDay <= cutoff.endDay ? month : month + 1
+  const endDay = clampDayToMonth(year, endMonth, cutoff.endDay)
+
+  return {
+    start: new Date(year, month, startDay),
+    end: new Date(year, endMonth, endDay, 23, 59, 59, 999),
+  }
+}
+
+export const isDateWithinRange = (
+  dateInput: string | Date,
+  range: { start: Date; end: Date },
+) => {
+  const date = new Date(dateInput)
+
+  if (Number.isNaN(date.getTime())) {
+    return false
+  }
+
+  return date >= range.start && date <= range.end
+}
+
+export const isDateInSameMonth = (
+  dateInput: string | Date,
+  monthDate: Date,
+) => {
+  const date = new Date(dateInput)
+
+  if (Number.isNaN(date.getTime())) {
+    return false
+  }
+
+  return (
+    date.getFullYear() === monthDate.getFullYear() &&
+    date.getMonth() === monthDate.getMonth()
+  )
+}
+
 export const getCutoffCycleKey = (
   cutoff: CutoffDefinition,
   date: Date,
@@ -329,7 +374,10 @@ export const getCurrentCutoff = (budgetData: BudgetData, now = new Date()) =>
       ) ?? getCutoffForDate(now, budgetData.settings.cutoffs)
     : undefined
 
-export const getCutoffSummaries = (budgetData: BudgetData): CutoffSummary[] =>
+export const getCutoffSummaries = (
+  budgetData: BudgetData,
+  now = new Date(),
+): CutoffSummary[] =>
   budgetData.settings.viewMode !== 'cutoff'
     ? []
     : budgetData.settings.cutoffs
@@ -341,11 +389,19 @@ export const getCutoffSummaries = (budgetData: BudgetData): CutoffSummary[] =>
             activeCutoffCount,
           )
           const totalIncome = budgetData.incomes
-            .filter((income) => income.cutoffId === cutoff.id)
+            .filter(
+              (income) =>
+                income.cutoffId === cutoff.id &&
+                isDateInSameMonth(income.receivedAt, now),
+            )
             .reduce((sum, income) => sum + income.amount, 0)
 
           const totalExpenses = budgetData.expenses
-            .filter((expense) => expense.cutoffId === cutoff.id)
+            .filter(
+              (expense) =>
+                expense.cutoffId === cutoff.id &&
+                isDateInSameMonth(expense.createdAt, now),
+            )
             .reduce((sum, expense) => sum + expense.amount, 0)
 
           const cutoffFixedExpenses = budgetData.settings.fixedExpenses.reduce((sum, expense) => {
@@ -398,7 +454,7 @@ export const getCutoffSummaries = (budgetData: BudgetData): CutoffSummary[] =>
 export const getCurrentBudgetSnapshot = (budgetData: BudgetData, now = new Date()) => {
   const currentCutoff = getCurrentCutoff(budgetData, now)
   const totals = getBudgetTotals(budgetData)
-  const cutoffSummaries = getCutoffSummaries(budgetData)
+  const cutoffSummaries = getCutoffSummaries(budgetData, now)
   const currentCycle = getCurrentBudgetCycle(budgetData, now)
   const currentCutoffSummary = currentCutoff
     ? cutoffSummaries.find((cutoff) => cutoff.cutoffId === currentCutoff.id)

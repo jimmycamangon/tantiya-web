@@ -5,6 +5,7 @@ import {
   getCutoffForDate,
   getHousingAmountForCutoff,
   getHousingCost,
+  isDateInSameMonth,
 } from '@/features/budget/calculations'
 import { useBudgetStore } from '@/hooks/useBudgetStore'
 import type {
@@ -352,10 +353,14 @@ export default function SetupPage() {
   }, [activeCutoffs, form.activeCutoffId, form.viewMode])
 
   const previewData = useMemo(() => {
+    const now = new Date()
     const activeCutoffCount = activeCutoffs.length
     const wholeMonthAllowance = allowanceAmountInSummary
 
     if (form.viewMode !== 'cutoff' || previewScope === 'whole-month') {
+      const actualGastos = budgetData.expenses
+        .filter((expense) => isDateInSameMonth(expense.createdAt, now))
+        .reduce((sum, expense) => sum + expense.amount, 0)
       const income =
         (form.viewMode === 'cutoff' ? configuredCutoffIncomeTotal : form.monthlyIncomeTarget) +
         wholeMonthAllowance
@@ -364,7 +369,8 @@ export default function SetupPage() {
         fixedExpenseTotal -
         payrollDeductionTotal -
         activeHousingAmount -
-        form.savingsBuffer
+        form.savingsBuffer -
+        actualGastos
 
       return {
         label: 'Whole month',
@@ -373,13 +379,14 @@ export default function SetupPage() {
         fixed: fixedExpenseTotal,
         payroll: payrollDeductionTotal,
         housing: activeHousingAmount,
+        actualGastos,
         carryover: 0,
         savings: form.savingsBuffer,
         remaining,
         note:
           form.viewMode === 'cutoff'
-            ? 'Whole-month preview combines all active cutoffs plus monthly items like housing and reserved savings.'
-            : 'Whole-month preview shows the current monthly budget based on your setup.',
+            ? 'Whole-month preview combines all active cutoffs, monthly items, reserved savings, and current-month gastos.'
+            : 'Whole-month preview shows the current monthly budget after current-month gastos.',
       }
     }
 
@@ -396,6 +403,7 @@ export default function SetupPage() {
         fixed: 0,
         payroll: 0,
         housing: 0,
+        actualGastos: 0,
         carryover: 0,
         savings: 0,
         remaining: 0,
@@ -428,6 +436,13 @@ export default function SetupPage() {
       form.cutoffCarryoverPlan.enabled && form.cutoffCarryoverPlan.cutoffId === focusedCutoff.id
         ? form.cutoffCarryoverPlan.amount
         : 0
+    const focusedActualGastos = budgetData.expenses
+      .filter(
+        (expense) =>
+          expense.cutoffId === focusedCutoff.id &&
+          isDateInSameMonth(expense.createdAt, now),
+      )
+      .reduce((sum, expense) => sum + expense.amount, 0)
     const income = focusedCutoff.expectedIncomeAmount + focusedAllowance
 
     return {
@@ -440,18 +455,26 @@ export default function SetupPage() {
       fixed: focusedFixed,
       payroll: focusedPayroll,
       housing: focusedHousing,
+      actualGastos: focusedActualGastos,
       carryover: focusedCarryover,
       savings: 0,
-      remaining: income + focusedCarryover - focusedFixed - focusedPayroll - focusedHousing,
+      remaining:
+        income +
+        focusedCarryover -
+        focusedFixed -
+        focusedPayroll -
+        focusedHousing -
+        focusedActualGastos,
       note:
         form.housingPlan.enabled && form.housingPlan.budgetApplication !== 'whole-month'
-          ? 'Cutoff preview focuses on the selected payroll period and includes the housing amount assigned to this cutoff.'
-          : 'Cutoff preview focuses on the selected payroll period. Reserved savings stays in the whole-month preview.',
+          ? 'Cutoff preview includes current-month gastos and the housing amount assigned to this cutoff.'
+          : 'Cutoff preview includes current-month gastos for the selected payroll period. Reserved savings stays in the whole-month preview.',
     }
   }, [
     activeCutoffs,
     activeHousingAmount,
     allowanceAmountInSummary,
+    budgetData.expenses,
     configuredCutoffIncomeTotal,
     currentMatchedCutoff,
     fixedExpenseTotal,
@@ -1802,6 +1825,12 @@ export default function SetupPage() {
               <div className="flex items-center justify-between gap-3 rounded-xl bg-muted/50 px-4 py-3">
                 <span className="text-muted-foreground">Payroll deductions</span>
                 <span className="font-semibold text-foreground">PHP {previewData.payroll.toLocaleString()}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3 rounded-xl bg-muted/50 px-4 py-3">
+                <span className="text-muted-foreground">Actual gastos logged</span>
+                <span className="font-semibold text-foreground">
+                  PHP {previewData.actualGastos.toLocaleString()}
+                </span>
               </div>
               {form.viewMode === 'cutoff' && (
                 <div className="flex items-center justify-between gap-3 rounded-xl bg-muted/50 px-4 py-3">

@@ -1,6 +1,11 @@
 import { useMemo } from 'react'
+import {
+  getCutoffForDate,
+  getCutoffRangeForMonth,
+  isDateInSameMonth,
+} from '@/features/budget/calculations'
 import { useBudgetStore } from '@/hooks/useBudgetStore'
-import type { CutoffDefinition, ExpenseCategory, ExpenseEntry } from '@/types/budget'
+import type { ExpenseCategory, ExpenseEntry } from '@/types/budget'
 
 type DateRange = {
   start: Date
@@ -33,15 +38,6 @@ const startOfMonth = (date: Date) => new Date(date.getFullYear(), date.getMonth(
 
 const endOfMonth = (date: Date) => new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999)
 
-const getLastDayOfMonth = (year: number, month: number) =>
-  new Date(year, month + 1, 0).getDate()
-
-const shiftDays = (date: Date, days: number) => {
-  const next = new Date(date)
-  next.setDate(next.getDate() + days)
-  return next
-}
-
 const toRangeLabel = (range: DateRange) =>
   `${range.start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} - ${range.end.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
 
@@ -51,10 +47,16 @@ const getExpensesForRange = (expenses: ExpenseEntry[], range: DateRange) =>
     return createdAt >= range.start && createdAt <= range.end
   })
 
-const getExpensesForCutoffAssignment = (
+const getExpensesForCutoffMonth = (
   expenses: ExpenseEntry[],
-  cutoffId?: string,
-) => expenses.filter((expense) => expense.cutoffId === cutoffId)
+  cutoffId: string | undefined,
+  monthDate: Date,
+) =>
+  expenses.filter(
+    (expense) =>
+      expense.cutoffId === cutoffId &&
+      isDateInSameMonth(expense.createdAt, monthDate),
+  )
 
 const sumExpenseAmounts = (expenses: ExpenseEntry[]) =>
   expenses.reduce((sum, expense) => sum + expense.amount, 0)
@@ -82,61 +84,6 @@ const getCategoryBreakdown = (expenses: ExpenseEntry[]) =>
     }))
     .sort((left, right) => right.amount - left.amount)
 
-const clampDayToMonth = (year: number, month: number, day: number) =>
-  Math.min(day, getLastDayOfMonth(year, month))
-
-const getCutoffRangeForDate = (
-  date: Date,
-  cutoff: CutoffDefinition,
-): DateRange => {
-  const year = date.getFullYear()
-  const month = date.getMonth()
-  const day = date.getDate()
-
-  if (cutoff.startDay <= cutoff.endDay) {
-    const anchoredMonth = day < cutoff.startDay ? month - 1 : month
-    const startDay = clampDayToMonth(year, anchoredMonth, cutoff.startDay)
-    const endDay = clampDayToMonth(year, anchoredMonth, cutoff.endDay)
-
-    return {
-      start: new Date(year, anchoredMonth, startDay),
-      end: new Date(year, anchoredMonth, endDay, 23, 59, 59, 999),
-    }
-  }
-
-  if (day >= cutoff.startDay) {
-    const startDay = clampDayToMonth(year, month, cutoff.startDay)
-    const endDay = clampDayToMonth(year, month + 1, cutoff.endDay)
-
-    return {
-      start: new Date(year, month, startDay),
-      end: new Date(year, month + 1, endDay, 23, 59, 59, 999),
-    }
-  }
-
-  const startDay = clampDayToMonth(year, month - 1, cutoff.startDay)
-  const endDay = clampDayToMonth(year, month, cutoff.endDay)
-
-  return {
-    start: new Date(year, month - 1, startDay),
-    end: new Date(year, month, endDay, 23, 59, 59, 999),
-  }
-}
-
-const getActiveCutoffForDate = (date: Date, cutoffs: CutoffDefinition[]) => {
-  const day = date.getDate()
-
-  return cutoffs.find((cutoff) => {
-    if (!cutoff.isActive) return false
-
-    if (cutoff.startDay <= cutoff.endDay) {
-      return day >= cutoff.startDay && day <= cutoff.endDay
-    }
-
-    return day >= cutoff.startDay || day <= cutoff.endDay
-  })
-}
-
 export default function AnalysisPage() {
   const { budgetData, snapshot } = useBudgetStore()
 
@@ -150,9 +97,11 @@ export default function AnalysisPage() {
     let periodSubtitle: string
     let currentCutoffId: string | undefined
     let previousCutoffId: string | undefined
+    const currentMonthDate = now
+    const previousMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
 
     if (isCutoffMode) {
-      const currentCutoff = snapshot.currentCutoff ?? getActiveCutoffForDate(now, budgetData.settings.cutoffs)
+      const currentCutoff = snapshot.currentCutoff ?? getCutoffForDate(now, budgetData.settings.cutoffs)
 
       if (!currentCutoff) {
         return {
@@ -174,27 +123,21 @@ export default function AnalysisPage() {
         }
       }
 
-      currentRange = getCutoffRangeForDate(now, currentCutoff)
+      currentRange = getCutoffRangeForMonth(now, currentCutoff)
       currentCutoffId = currentCutoff.id
-      const previousAnchor = shiftDays(currentRange.start, -1)
-      const previousCutoff = getActiveCutoffForDate(previousAnchor, budgetData.settings.cutoffs)
-      previousCutoffId = previousCutoff?.id
-
-      previousRange = previousCutoff
-        ? getCutoffRangeForDate(previousAnchor, previousCutoff)
-        : {
-            start: previousAnchor,
-            end: previousAnchor,
-          }
+      previousCutoffId = currentCutoff.id
+      previousRange = getCutoffRangeForMonth(previousMonthDate, currentCutoff)
 
       periodTitle = currentCutoff.label
-      periodSubtitle = `Comparing gastos charged to ${currentCutoff.label} (${toRangeLabel(currentRange)}) against the previous payroll period.`
+      periodSubtitle = `Comparing ${currentCutoff.label} gastos in ${now.toLocaleDateString(
+        undefined,
+        { month: 'long', year: 'numeric' },
+      )} against the same cutoff last month.`
     } else {
       currentRange = {
         start: startOfMonth(now),
         end: endOfMonth(now),
       }
-      const previousMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
       previousRange = {
         start: startOfMonth(previousMonthDate),
         end: endOfMonth(previousMonthDate),
@@ -205,12 +148,12 @@ export default function AnalysisPage() {
 
     const currentExpenses =
       isCutoffMode && currentCutoffId
-        ? getExpensesForCutoffAssignment(budgetData.expenses, currentCutoffId)
+        ? getExpensesForCutoffMonth(budgetData.expenses, currentCutoffId, currentMonthDate)
         : getExpensesForRange(budgetData.expenses, currentRange)
     const previousExpenses =
       isCutoffMode
         ? previousCutoffId
-          ? getExpensesForCutoffAssignment(budgetData.expenses, previousCutoffId)
+          ? getExpensesForCutoffMonth(budgetData.expenses, previousCutoffId, previousMonthDate)
           : []
         : getExpensesForRange(budgetData.expenses, previousRange)
     const currentTotal = sumExpenseAmounts(currentExpenses)
@@ -330,7 +273,7 @@ export default function AnalysisPage() {
                   </p>
                   <p className="mt-2 text-sm text-muted-foreground">
                     {analysis.isCutoffMode
-                      ? 'Comparing expenses by charged cutoff assignment.'
+                      ? 'Comparing current-month expenses for the focused cutoff against the same cutoff last month.'
                       : 'A quick visual between the current and previous spending periods.'}
                   </p>
                 </div>
@@ -491,7 +434,7 @@ export default function AnalysisPage() {
                 </p>
                 <p className="mt-2 text-sm text-muted-foreground">
                   {analysis.isCutoffMode
-                    ? 'The latest entries charged to the active comparison cutoff.'
+                    ? 'The latest current-month entries charged to the active comparison cutoff.'
                     : 'The latest entries inside the active comparison period.'}
                 </p>
               </div>
