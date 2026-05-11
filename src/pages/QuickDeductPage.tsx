@@ -39,7 +39,11 @@ export default function QuickDeductPage() {
             return true
           }
 
-          return Boolean(currentCutoff) && expense.cutoffId === currentCutoff.id
+          if (!currentCutoff) {
+            return false
+          }
+
+          return expense.cutoffId === currentCutoff.id
         })
         .slice()
         .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
